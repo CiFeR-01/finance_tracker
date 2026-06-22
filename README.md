@@ -1,4 +1,4 @@
-# finance_tracker
+# group_asignment
 
 A new Flutter project.
 
