@@ -4,6 +4,7 @@ import '../widgets/most_spent_card.dart';
 import '../widgets/monthly_comparison_card.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'add_page.dart';
+import 'tax_page.dart';
 import '../main.dart';
 import '../models/income_record.dart';
 import '../models/expense_record.dart';
@@ -22,7 +23,7 @@ class _HomePageState extends State<HomePage> {
     const HomeContent(),
     const AddPage(),
     const Center(child: Text('Report Page')),
-    const Center(child: Text('Tax Page')),
+    const TaxPage(),
   ];
 
   @override
