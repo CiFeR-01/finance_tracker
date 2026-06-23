@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart';
 import '../models/expense_record.dart';
 
@@ -38,10 +39,32 @@ class _AddExpensePageState extends State<AddExpensePage> {
     'Private Retirement Scheme',
     'Insurance',
     'Zakat',
+    'Donation/Gift',
+    'Others'
+  ];
+
+  // List of categories that qualify for Malaysian Tax Relief
+  final List<String> _deductibleCategories = [
+    'Medical expenses',
+    'Health screening',
+    'Lifestyle',
+    'Sports lifestyle',
+    'Education fees',
+    'Childcare fees',
+    'SSPN net deposit',
+    'Breastfeeding equipment',
+    'EV charging / composting machine',
+    'Housing loan interest',
+    'Private Retirement Scheme',
+    'Insurance',
+    'Zakat',
     'Donation/Gift'
   ];
 
+  bool get _isCategoryDeductible => _deductibleCategories.contains(_selectedCategory);
+
   Future<void> _pickImage() async {
+    // ... (rest of method remains same)
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
@@ -71,11 +94,20 @@ class _AddExpensePageState extends State<AddExpensePage> {
   }
 
   void _saveExpense() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       final amount = double.parse(_amountController.text);
 
       final entry = ExpenseRecord(
         id: '',
+        userId: user.uid,
         amount: amount,
         category: _selectedCategory,
         description: _descriptionController.text,
@@ -158,24 +190,80 @@ class _AddExpensePageState extends State<AddExpensePage> {
                       onChanged: (String? newValue) {
                         setState(() {
                           _selectedCategory = newValue!;
+                          // Automate Checkbox: If category is deductible, auto-tick it
+                          if (_isCategoryDeductible) {
+                            _isTaxDeductible = true;
+                          } else {
+                            _isTaxDeductible = false;
+                          }
                         });
                       },
                     ),
                     const SizedBox(height: 16),
 
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _isTaxDeductible,
-                          onChanged: (value) {
-                            setState(() {
-                              _isTaxDeductible = value ?? false;
-                            });
-                          },
-                          activeColor: Colors.purple,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // More padding
+                      decoration: BoxDecoration(
+                        color: _isCategoryDeductible ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isCategoryDeductible ? Colors.green.shade300 : Colors.red.shade300,
+                          width: 1.5,
                         ),
-                        const Text('Tax Deductible', style: TextStyle(fontSize: 16)),
-                      ],
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _isTaxDeductible,
+                            fillColor: WidgetStateProperty.resolveWith((states) {
+                              if (!_isCategoryDeductible) return Colors.red.shade200; // Red tint when disabled
+                              if (states.contains(WidgetState.selected)) return Colors.purple;
+                              return Colors.white;
+                            }),
+                            onChanged: _isCategoryDeductible 
+                              ? (value) {
+                                  setState(() {
+                                    _isTaxDeductible = value ?? false;
+                                  });
+                                }
+                              : null, // Disable if not a deductible category
+                            activeColor: Colors.purple,
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tax Deductible', 
+                                  style: TextStyle(
+                                    fontSize: 16, 
+                                    fontWeight: FontWeight.bold,
+                                    color: _isCategoryDeductible ? Colors.black : Colors.red.shade900,
+                                  ),
+                                ),
+                                Text(
+                                  _isCategoryDeductible 
+                                      ? 'This category qualifies for tax relief'
+                                      : 'Not eligible for Malaysian tax relief',
+                                  style: TextStyle(
+                                    fontSize: 11, 
+                                    color: _isCategoryDeductible ? Colors.green.shade700 : Colors.red.shade700, 
+                                    fontWeight: FontWeight.bold
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Icon(
+                              _isCategoryDeductible ? Icons.check_circle : Icons.error_outline, 
+                              color: _isCategoryDeductible ? Colors.green : Colors.red, 
+                              size: 24
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
 

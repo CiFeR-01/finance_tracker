@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart';
 import '../models/income_record.dart';
 
@@ -65,6 +66,14 @@ class _AddIncomePageState extends State<AddIncomePage> {
   }
 
   void _saveIncome() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       final total = double.parse(_totalIncomeController.text);
       final epf = double.parse(_epfController.text);
@@ -73,7 +82,8 @@ class _AddIncomePageState extends State<AddIncomePage> {
       final netIncome = total - epf - socso - pcb;
 
       final entry = IncomeRecord(
-        id: '', // Firestore will generate this if we use .add(), or we can use Uuid
+        id: '', 
+        userId: user.uid,
         totalIncome: total,
         epfAmount: epf,
         socsoAmount: socso,
