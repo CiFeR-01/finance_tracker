@@ -4,9 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:drift/drift.dart' as drift;
 import '../main.dart';
-import '../database/app_database.dart';
+import '../models/income_record.dart';
 
 class AddIncomePage extends StatefulWidget {
   const AddIncomePage({super.key});
@@ -73,19 +72,21 @@ class _AddIncomePageState extends State<AddIncomePage> {
       final pcb = double.parse(_pcbController.text);
       final netIncome = total - epf - socso - pcb;
 
-      final entry = IncomeRecordsCompanion(
-        totalIncome: drift.Value(total),
-        epfAmount: drift.Value(epf),
-        socsoAmount: drift.Value(socso),
-        pcbAmount: drift.Value(pcb),
-        netIncome: drift.Value(netIncome),
-        category: drift.Value(_selectedCategory),
-        description: drift.Value(_descriptionController.text),
-        incomeDate: drift.Value(_selectedDate),
-        proofImagePath: drift.Value(_proofImagePath),
+      final entry = IncomeRecord(
+        id: '', // Firestore will generate this if we use .add(), or we can use Uuid
+        totalIncome: total,
+        epfAmount: epf,
+        socsoAmount: socso,
+        pcbAmount: pcb,
+        netIncome: netIncome,
+        category: _selectedCategory,
+        description: _descriptionController.text,
+        incomeDate: _selectedDate,
+        proofImagePath: _proofImagePath,
+        createdAt: DateTime.now(),
       );
 
-      await database.insertIncome(entry);
+      await financeService.insertIncome(entry);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

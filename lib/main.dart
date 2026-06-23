@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'views/home_page.dart';
-import 'database/app_database.dart';
+import 'services/finance_service.dart';
 
-// Global database instance
-late AppDatabase database;
+
+// Global finance service instance
+late FinanceService financeService;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  database = AppDatabase();
+  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  // Add this line to "ping" the database and wake up the inspector
-  await database.select(database.incomeRecords).get();
+  financeService = FinanceService();
 
   runApp(const FinanceTrackerApp());
 }
