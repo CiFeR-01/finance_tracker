@@ -19,20 +19,26 @@ class _AddExpensePageState extends State<AddExpensePage> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  String _selectedCategory = 'Food';
+  String _selectedCategory = 'Medical expenses';
   DateTime _selectedDate = DateTime.now();
   String? _proofImagePath;
   bool _isTaxDeductible = false;
 
   final List<String> _categories = [
-    'Food',
-    'Transport',
-    'Rent',
-    'Shopping',
-    'Health',
-    'Education',
-    'Groceries',
-    'Others'
+    'Medical expenses',
+    'Health screening',
+    'Lifestyle',
+    'Sports lifestyle',
+    'Education fees',
+    'Childcare fees',
+    'SSPN net deposit',
+    'Breastfeeding equipment',
+    'EV charging / composting machine',
+    'Housing loan interest',
+    'Private Retirement Scheme',
+    'Insurance',
+    'Zakat',
+    'Donation/Gift'
   ];
 
   Future<void> _pickImage() async {
