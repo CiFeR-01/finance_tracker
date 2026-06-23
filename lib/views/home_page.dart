@@ -5,6 +5,7 @@ import '../widgets/monthly_comparison_card.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'add_page.dart';
 import 'tax_page.dart';
+import 'profile_page.dart';
 import '../main.dart';
 import '../models/income_record.dart';
 import '../models/expense_record.dart';
@@ -24,6 +25,7 @@ class _HomePageState extends State<HomePage> {
     const AddPage(),
     const Center(child: Text('Report Page')),
     const TaxPage(),
+    const ProfilePage(),
   ];
 
   @override
@@ -51,11 +53,28 @@ class HomeContent extends StatelessWidget {
     return StreamBuilder<List<IncomeRecord>>(
       stream: financeService.watchAllIncomes(),
       builder: (context, incomeSnapshot) {
+        if (incomeSnapshot.hasError) {
+          debugPrint('Income Stream Error: ${incomeSnapshot.error}');
+          return Center(child: Text('Error loading incomes: ${incomeSnapshot.error}'));
+        }
+
         return StreamBuilder<List<ExpenseRecord>>(
           stream: financeService.watchAllExpenses(),
           builder: (context, expenseSnapshot) {
+            if (expenseSnapshot.hasError) {
+              debugPrint('Expense Stream Error: ${expenseSnapshot.error}');
+              return Center(child: Text('Error loading expenses: ${expenseSnapshot.error}'));
+            }
+
+            if (incomeSnapshot.connectionState == ConnectionState.waiting ||
+                expenseSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
             final incomes = incomeSnapshot.data ?? [];
             final expenses = expenseSnapshot.data ?? [];
+
+            debugPrint('HOME: Loaded ${incomes.length} incomes and ${expenses.length} expenses');
 
             // Calculations
             double totalIncome = incomes.fold(0, (sum, item) => sum + item.netIncome);
@@ -84,7 +103,7 @@ class HomeContent extends StatelessWidget {
                 // 1. Top Header with Purple Gradient
                 Container(
                   width: double.infinity,
-                  height: 140,
+                  height: 160,
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
@@ -92,27 +111,45 @@ class HomeContent extends StatelessWidget {
                       end: Alignment.bottomRight,
                     ),
                   ),
-                  child: const SafeArea(
+                  child: SafeArea(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'FinanceTracker',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'FinanceTracker',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (incomes.isEmpty && expenses.isEmpty)
+                                const Tooltip(
+                                  message: "No data found in Firestore",
+                                  child: Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                                ),
+                            ],
                           ),
-                          Text(
+                          const Text(
                             'Manage your Finances',
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: 16,
                             ),
                           ),
+                          if (incomes.isEmpty && expenses.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                'Check Firestore userId field!',
+                                style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
                         ],
                       ),
                     ),

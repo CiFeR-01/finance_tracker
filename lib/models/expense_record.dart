@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ExpenseRecord {
   final String id;
+  final String userId;
   final double amount;
   final String category;
   final String? description;
@@ -12,6 +13,7 @@ class ExpenseRecord {
 
   ExpenseRecord({
     required this.id,
+    required this.userId,
     required this.amount,
     required this.category,
     this.description,
@@ -23,6 +25,7 @@ class ExpenseRecord {
 
   Map<String, dynamic> toMap() {
     return {
+      'userId': userId,
       'amount': amount,
       'category': category,
       'description': description,
@@ -34,15 +37,22 @@ class ExpenseRecord {
   }
 
   factory ExpenseRecord.fromMap(String id, Map<String, dynamic> map) {
+    DateTime parseDate(dynamic d) {
+      if (d is Timestamp) return d.toDate();
+      if (d is String) return DateTime.tryParse(d) ?? DateTime.now();
+      return DateTime.now();
+    }
+
     return ExpenseRecord(
       id: id,
-      amount: (map['amount'] as num).toDouble(),
+      userId: map['userId'] ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
       category: map['category'] ?? '',
       description: map['description'],
-      expenseDate: (map['expenseDate'] as Timestamp).toDate(),
+      expenseDate: parseDate(map['expenseDate']),
       proofImagePath: map['proofImagePath'],
       isTaxDeductible: map['isTaxDeductible'] ?? false,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: parseDate(map['createdAt']),
     );
   }
 }
