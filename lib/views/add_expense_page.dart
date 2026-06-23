@@ -35,7 +35,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
     'Breastfeeding equipment',
     'EV charging / composting machine',
     'Housing loan interest',
-    'PRS',
+    'Private Retirement Scheme',
     'Insurance',
     'Zakat',
     'Donation/Gift'
