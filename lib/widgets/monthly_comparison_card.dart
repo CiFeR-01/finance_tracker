@@ -1,11 +1,77 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../models/income_record.dart';
+import '../models/expense_record.dart';
+import 'package:intl/intl.dart';
 
 class MonthlyComparisonCard extends StatelessWidget {
-  const MonthlyComparisonCard({super.key});
+  final List<IncomeRecord> incomes;
+  final List<ExpenseRecord> expenses;
+
+  const MonthlyComparisonCard({
+    super.key,
+    required this.incomes,
+    required this.expenses,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Group by month
+    Map<String, double> monthlyIncomes = {};
+    Map<String, double> monthlyExpenses = {};
+
+    // Get last 6 months
+    List<DateTime> months = [];
+    for (int i = 5; i >= 0; i--) {
+      months.add(DateTime(DateTime.now().year, DateTime.now().month - i));
+    }
+
+    for (var month in months) {
+      String key = DateFormat('MMM').format(month);
+      monthlyIncomes[key] = 0;
+      monthlyExpenses[key] = 0;
+    }
+
+    for (var income in incomes) {
+      String key = DateFormat('MMM').format(income.incomeDate);
+      if (monthlyIncomes.containsKey(key)) {
+        monthlyIncomes[key] = monthlyIncomes[key]! + income.netIncome;
+      }
+    }
+
+    for (var expense in expenses) {
+      String key = DateFormat('MMM').format(expense.expenseDate);
+      if (monthlyExpenses.containsKey(key)) {
+        monthlyExpenses[key] = monthlyExpenses[key]! + expense.amount;
+      }
+    }
+
+    List<BarChartGroupData> barGroups = [];
+    double maxAmount = 1000;
+
+    for (int i = 0; i < months.length; i++) {
+      String key = DateFormat('MMM').format(months[i]);
+      double inc = monthlyIncomes[key] ?? 0;
+      double exp = monthlyExpenses[key] ?? 0;
+      
+      if (inc > maxAmount) maxAmount = inc;
+      if (exp > maxAmount) maxAmount = exp;
+
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(toY: exp, color: Colors.red, width: 10, borderRadius: BorderRadius.circular(4)),
+            BarChartRodData(toY: inc, color: Colors.green, width: 10, borderRadius: BorderRadius.circular(4)),
+          ],
+        ),
+      );
+    }
+
+    // Round up maxAmount to nearest 250 for grid
+    maxAmount = ((maxAmount / 250).ceil() * 250).toDouble();
+    if (maxAmount == 0) maxAmount = 1000;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -37,7 +103,7 @@ class MonthlyComparisonCard extends StatelessWidget {
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
-                maxY: 1000,
+                maxY: maxAmount,
                 barTouchData: BarTouchData(enabled: true),
                 titlesData: FlTitlesData(
                   show: true,
@@ -45,14 +111,11 @@ class MonthlyComparisonCard extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        switch (value.toInt()) {
-                          case 0:
-                            return const Text('Apr', style: TextStyle(color: Colors.grey));
-                          case 1:
-                            return const Text('May', style: TextStyle(color: Colors.grey));
-                          default:
-                            return const Text('');
+                        int index = value.toInt();
+                        if (index >= 0 && index < months.length) {
+                          return Text(DateFormat('MMM').format(months[index]), style: const TextStyle(color: Colors.grey, fontSize: 10));
                         }
+                        return const Text('');
                       },
                     ),
                   ),
@@ -61,8 +124,8 @@ class MonthlyComparisonCard extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) {
-                        if (value == 0 || value == 250 || value == 500 || value == 1000) {
-                          return Text(value.toInt().toString(), style: const TextStyle(color: Colors.grey, fontSize: 12));
+                        if (value % 250 == 0 || value == maxAmount) {
+                          return Text(value.toInt().toString(), style: const TextStyle(color: Colors.grey, fontSize: 10));
                         }
                         return const SizedBox();
                       },
@@ -82,22 +145,7 @@ class MonthlyComparisonCard extends StatelessWidget {
                   ),
                 ),
                 borderData: FlBorderData(show: false),
-                barGroups: [
-                  BarChartGroupData(
-                    x: 0,
-                    barRods: [
-                      BarChartRodData(toY: 0, color: Colors.red, width: 15, borderRadius: BorderRadius.circular(4)),
-                      BarChartRodData(toY: 0, color: Colors.green, width: 15, borderRadius: BorderRadius.circular(4)),
-                    ],
-                  ),
-                  BarChartGroupData(
-                    x: 1,
-                    barRods: [
-                      BarChartRodData(toY: 861, color: Colors.red, width: 15, borderRadius: BorderRadius.circular(4)),
-                      BarChartRodData(toY: 213, color: Colors.green, width: 15, borderRadius: BorderRadius.circular(4)),
-                    ],
-                  ),
-                ],
+                barGroups: barGroups,
               ),
             ),
           ),
