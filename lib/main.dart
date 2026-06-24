@@ -9,6 +9,8 @@ import 'services/finance_service.dart';
 import 'services/auth_service.dart';
 import 'viewmodels/home_view_model.dart';
 import 'viewmodels/tax_view_model.dart';
+import 'viewmodels/add_expense_view_model.dart';
+import 'viewmodels/add_income_view_model.dart';
 
 
 //test
@@ -29,6 +31,8 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
         ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
+        ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
+        ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
       ],
       child: const FinanceTrackerApp(),
     ),
