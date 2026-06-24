@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'views/home_page.dart';
+import 'views/login_page.dart';
 import 'services/finance_service.dart';
+import 'services/auth_service.dart';
+import 'viewmodels/home_view_model.dart';
+import 'viewmodels/tax_view_model.dart';
+import 'viewmodels/add_expense_view_model.dart';
+import 'viewmodels/add_income_view_model.dart';
 
 
+//test
 // Global finance service instance
 late FinanceService financeService;
 
@@ -33,7 +42,29 @@ class FinanceTrackerApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const HomePage(),
+      home: StreamBuilder<User?>(
+        stream: AuthService().userStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          
+          if (snapshot.hasData) {
+            // Added ValueKey to force recreation of all ViewModels when UID changes
+            return MultiProvider(
+              key: ValueKey(snapshot.data?.uid),
+              providers: [
+                ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
+                ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
+                ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
+                ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
+              ],
+              child: const HomePage(),
+            );
+          }
+          return const LoginPage();
+        },
+      ),
     );
   }
 }
