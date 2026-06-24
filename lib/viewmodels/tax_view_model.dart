@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/income_record.dart';
@@ -15,6 +16,9 @@ class TaxViewModel extends ChangeNotifier {
   UserModel? _userModel;
   bool _isLoading = true;
 
+  StreamSubscription? _incomeSub;
+  StreamSubscription? _expenseSub;
+
   TaxViewModel(this._financeService, this._authService) {
     _init();
   }
@@ -25,19 +29,34 @@ class TaxViewModel extends ChangeNotifier {
   void _init() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      _userModel = await _authService.getUserData(user.uid);
+      final data = await _authService.getUserData(user.uid);
       
-      _financeService.watchAllIncomes().listen((data) {
+      if (data == null) {
+        // Document missing in Firestore, force logout
+        await _authService.logout();
+        return;
+      }
+
+      _userModel = data;
+      
+      _incomeSub = _financeService.watchAllIncomes().listen((data) {
         _incomes = data;
         notifyListeners();
       });
-      _financeService.watchAllExpenses().listen((data) {
+      _expenseSub = _financeService.watchAllExpenses().listen((data) {
         _expenses = data;
         notifyListeners();
       });
     }
     _isLoading = false;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _incomeSub?.cancel();
+    _expenseSub?.cancel();
+    super.dispose();
   }
 
   List<Map<String, dynamic>> get reliefItems {

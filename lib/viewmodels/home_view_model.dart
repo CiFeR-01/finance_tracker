@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/income_record.dart';
 import '../models/expense_record.dart';
@@ -8,16 +9,26 @@ class HomeViewModel extends ChangeNotifier {
 
   List<IncomeRecord> _incomes = [];
   List<ExpenseRecord> _expenses = [];
+  
+  StreamSubscription? _incomeSub;
+  StreamSubscription? _expenseSub;
 
   HomeViewModel(this._financeService) {
-    _financeService.watchAllIncomes().listen((data) {
+    _incomeSub = _financeService.watchAllIncomes().listen((data) {
       _incomes = data;
       notifyListeners();
     });
-    _financeService.watchAllExpenses().listen((data) {
+    _expenseSub = _financeService.watchAllExpenses().listen((data) {
       _expenses = data;
       notifyListeners();
     });
+  }
+
+  @override
+  void dispose() {
+    _incomeSub?.cancel();
+    _expenseSub?.cancel();
+    super.dispose();
   }
 
   List<IncomeRecord> get incomes => _incomes;
