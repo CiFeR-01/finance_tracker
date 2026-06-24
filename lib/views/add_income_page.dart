@@ -4,9 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:firebase_auth/firebase_auth.dart';
-import '../main.dart';
-import '../models/income_record.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/add_income_view_model.dart';
 
 class AddIncomePage extends StatefulWidget {
   const AddIncomePage({super.key});
@@ -23,20 +22,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
   final _pcbController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  String _selectedCategory = 'Salary';
-  DateTime _selectedDate = DateTime.now();
-  String? _proofImagePath;
-
-  final List<String> _categories = [
-    'Salary',
-    'Bonus',
-    'Freelance',
-    'Part-time Job',
-    'Allowance',
-    'Others'
-  ];
-
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(AddIncomeViewModel viewModel) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
@@ -44,71 +30,49 @@ class _AddIncomePageState extends State<AddIncomePage> {
       final appDir = await getApplicationDocumentsDirectory();
       final fileName = p.basename(pickedFile.path);
       final savedImage = await File(pickedFile.path).copy('${appDir.path}/$fileName');
-
-      setState(() {
-        _proofImagePath = savedImage.path;
-      });
+      viewModel.setImagePath(savedImage.path);
     }
   }
 
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectDate(BuildContext context, AddIncomeViewModel viewModel) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: viewModel.selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
+    if (picked != null) {
+      viewModel.setDate(picked);
     }
   }
 
-  void _saveIncome() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in')),
-      );
-      return;
-    }
-
+  void _saveIncome(AddIncomeViewModel viewModel) async {
     if (_formKey.currentState!.validate()) {
-      final total = double.parse(_totalIncomeController.text);
-      final epf = double.parse(_epfController.text);
-      final socso = double.parse(_socsoController.text);
-      final pcb = double.parse(_pcbController.text);
-      final netIncome = total - epf - socso - pcb;
-
-      final entry = IncomeRecord(
-        id: '', 
-        userId: user.uid,
-        totalIncome: total,
-        epfAmount: epf,
-        socsoAmount: socso,
-        pcbAmount: pcb,
-        netIncome: netIncome,
-        category: _selectedCategory,
+      final success = await viewModel.saveIncome(
+        totalIncomeStr: _totalIncomeController.text,
+        epfStr: _epfController.text,
+        socsoStr: _socsoController.text,
+        pcbStr: _pcbController.text,
         description: _descriptionController.text,
-        incomeDate: _selectedDate,
-        proofImagePath: _proofImagePath,
-        createdAt: DateTime.now(),
       );
 
-      await financeService.insertIncome(entry);
-
-      if (mounted) {
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Income saved successfully')),
         );
         Navigator.pop(context);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save income. Check login status.')),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<AddIncomeViewModel>();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -166,15 +130,15 @@ class _AddIncomePageState extends State<AddIncomePage> {
                     _buildTextField(_pcbController, 'RM1000', isNumber: true),
                     _buildLabel('Category'),
                     DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      value: viewModel.selectedCategory,
                       decoration: _inputDecoration(''),
-                      items: _categories.map((String category) {
+                      items: viewModel.categories.map((String category) {
                         return DropdownMenuItem(value: category, child: Text(category));
                       }).toList(),
                       onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedCategory = newValue!;
-                        });
+                        if (newValue != null) {
+                          viewModel.setCategory(newValue);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
@@ -182,7 +146,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                     _buildTextField(_descriptionController, 'Examples...'),
                     _buildLabel('Date'),
                     InkWell(
-                      onTap: () => _selectDate(context),
+                      onTap: () => _selectDate(context, viewModel),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                         decoration: BoxDecoration(
@@ -192,7 +156,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                            Text(DateFormat('dd/MM/yyyy').format(viewModel.selectedDate)),
                             const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
                           ],
                         ),
@@ -201,7 +165,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                     const SizedBox(height: 16),
                     _buildLabel('Proof'),
                     GestureDetector(
-                      onTap: _pickImage,
+                      onTap: () => _pickImage(viewModel),
                       child: Container(
                         width: double.infinity,
                         height: 150,
@@ -210,7 +174,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                           borderRadius: BorderRadius.circular(10),
                           color: Colors.grey.shade50,
                         ),
-                        child: _proofImagePath == null
+                        child: viewModel.proofImagePath == null
                             ? const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -221,7 +185,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                               )
                             : ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: Image.file(File(_proofImagePath!), fit: BoxFit.cover),
+                                child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
                               ),
                       ),
                     ),
@@ -230,7 +194,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: _saveIncome,
+                        onPressed: () => _saveIncome(viewModel),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

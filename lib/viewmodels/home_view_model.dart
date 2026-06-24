@@ -63,4 +63,12 @@ class HomeViewModel extends ChangeNotifier {
     });
     return amount;
   }
+
+  Future<void> deleteIncome(String id) async {
+    await _financeService.deleteIncome(id);
+  }
+
+  Future<void> deleteExpense(String id) async {
+    await _financeService.deleteExpense(id);
+  }
 }

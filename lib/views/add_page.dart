@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/transaction_card.dart';
 import '../widgets/income_option_sheet.dart';
 import '../widgets/expense_option_sheet.dart';
 import 'add_income_page.dart';
 import 'add_expense_page.dart';
-import '../main.dart';
-import '../models/income_record.dart';
-import '../models/expense_record.dart';
+import '../viewmodels/home_view_model.dart';
 import 'package:intl/intl.dart';
 
 class AddPage extends StatelessWidget {
@@ -14,6 +13,8 @@ class AddPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<HomeViewModel>();
+
     return Column(
       children: [
         // Top Header
@@ -79,29 +80,24 @@ class AddPage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                StreamBuilder<List<IncomeRecord>>(
-                  stream: financeService.watchAllIncomes(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: Text('No income records yet', style: TextStyle(color: Colors.grey))),
+                if (viewModel.incomes.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: Text('No income records yet', style: TextStyle(color: Colors.grey))),
+                  )
+                else
+                  Column(
+                    children: viewModel.incomes.map((income) {
+                      return TransactionCard(
+                        amount: '+RM ${income.netIncome.toStringAsFixed(2)}',
+                        category: income.category,
+                        date: DateFormat('dd/MM/yyyy').format(income.incomeDate),
+                        borderColor: Colors.green,
+                        amountColor: Colors.green,
+                        onDelete: () => viewModel.deleteIncome(income.id),
                       );
-                    }
-                    return Column(
-                      children: snapshot.data!.map((income) {
-                        return TransactionCard(
-                          amount: '+RM ${income.netIncome.toStringAsFixed(2)}',
-                          category: income.category,
-                          date: DateFormat('dd/MM/yyyy').format(income.incomeDate),
-                          borderColor: Colors.green,
-                          amountColor: Colors.green,
-                          onDelete: () => financeService.deleteIncome(income.id),
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
+                    }).toList(),
+                  ),
 
                 const Divider(height: 40),
 
@@ -136,30 +132,25 @@ class AddPage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                StreamBuilder<List<ExpenseRecord>>(
-                  stream: financeService.watchAllExpenses(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: Text('No expense records yet', style: TextStyle(color: Colors.grey))),
+                if (viewModel.expenses.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: Text('No expense records yet', style: TextStyle(color: Colors.grey))),
+                  )
+                else
+                  Column(
+                    children: viewModel.expenses.map((expense) {
+                      return TransactionCard(
+                        amount: '-RM ${expense.amount.toStringAsFixed(2)}',
+                        category: expense.category,
+                        date: DateFormat('dd/MM/yyyy').format(expense.expenseDate),
+                        borderColor: Colors.red,
+                        amountColor: Colors.red,
+                        taxTag: expense.isTaxDeductible ? 'Tax deduct' : null,
+                        onDelete: () => viewModel.deleteExpense(expense.id),
                       );
-                    }
-                    return Column(
-                      children: snapshot.data!.map((expense) {
-                        return TransactionCard(
-                          amount: '-RM ${expense.amount.toStringAsFixed(2)}',
-                          category: expense.category,
-                          date: DateFormat('dd/MM/yyyy').format(expense.expenseDate),
-                          borderColor: Colors.red,
-                          amountColor: Colors.red,
-                          taxTag: expense.isTaxDeductible ? 'Tax deduct' : null,
-                          onDelete: () => financeService.deleteExpense(expense.id),
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
+                    }).toList(),
+                  ),
               ],
             ),
           ),
