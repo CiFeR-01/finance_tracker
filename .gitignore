@@ -1,0 +1,12 @@
+# Firebase configuration files (if you want to keep them private)
+google-services.json
+GoogleService-Info.plist
+
+# Flutter/Dart build files
+.dart_tool/
+.packages
+.pub-cache/
+build/
+
+# Local environment secrets
+.env

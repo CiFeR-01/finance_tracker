@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class IncomeRecord {
   final String id;
+  final String userId;
   final double totalIncome;
   final double epfAmount;
   final double socsoAmount;
@@ -15,6 +16,7 @@ class IncomeRecord {
 
   IncomeRecord({
     required this.id,
+    required this.userId,
     required this.totalIncome,
     required this.epfAmount,
     required this.socsoAmount,
@@ -29,6 +31,7 @@ class IncomeRecord {
 
   Map<String, dynamic> toMap() {
     return {
+      'userId': userId,
       'totalIncome': totalIncome,
       'epfAmount': epfAmount,
       'socsoAmount': socsoAmount,
@@ -43,18 +46,25 @@ class IncomeRecord {
   }
 
   factory IncomeRecord.fromMap(String id, Map<String, dynamic> map) {
+    DateTime parseDate(dynamic d) {
+      if (d is Timestamp) return d.toDate();
+      if (d is String) return DateTime.tryParse(d) ?? DateTime.now();
+      return DateTime.now();
+    }
+
     return IncomeRecord(
       id: id,
-      totalIncome: (map['totalIncome'] as num).toDouble(),
-      epfAmount: (map['epfAmount'] as num).toDouble(),
-      socsoAmount: (map['socsoAmount'] as num).toDouble(),
-      pcbAmount: (map['pcbAmount'] as num).toDouble(),
-      netIncome: (map['netIncome'] as num).toDouble(),
+      userId: map['userId'] ?? '',
+      totalIncome: (map['totalIncome'] as num?)?.toDouble() ?? 0.0,
+      epfAmount: (map['epfAmount'] as num?)?.toDouble() ?? 0.0,
+      socsoAmount: (map['socsoAmount'] as num?)?.toDouble() ?? 0.0,
+      pcbAmount: (map['pcbAmount'] as num?)?.toDouble() ?? 0.0,
+      netIncome: (map['netIncome'] as num?)?.toDouble() ?? 0.0,
       category: map['category'] ?? '',
       description: map['description'],
-      incomeDate: (map['incomeDate'] as Timestamp).toDate(),
+      incomeDate: parseDate(map['incomeDate']),
       proofImagePath: map['proofImagePath'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdAt: parseDate(map['createdAt']),
     );
   }
 }

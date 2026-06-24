@@ -4,8 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import '../main.dart';
-import '../models/expense_record.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/add_expense_view_model.dart';
 
 class AddExpensePage extends StatefulWidget {
   const AddExpensePage({super.key});
@@ -19,23 +19,15 @@ class _AddExpensePageState extends State<AddExpensePage> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  String _selectedCategory = 'Food';
-  DateTime _selectedDate = DateTime.now();
-  String? _proofImagePath;
-  bool _isTaxDeductible = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AddExpenseViewModel>().clearData();
+    });
+  }
 
-  final List<String> _categories = [
-    'Food',
-    'Transport',
-    'Rent',
-    'Shopping',
-    'Health',
-    'Education',
-    'Groceries',
-    'Others'
-  ];
-
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(AddExpenseViewModel viewModel) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
@@ -43,55 +35,46 @@ class _AddExpensePageState extends State<AddExpensePage> {
       final appDir = await getApplicationDocumentsDirectory();
       final fileName = p.basename(pickedFile.path);
       final savedImage = await File(pickedFile.path).copy('${appDir.path}/$fileName');
-
-      setState(() {
-        _proofImagePath = savedImage.path;
-      });
+      viewModel.setImagePath(savedImage.path);
     }
   }
 
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectDate(BuildContext context, AddExpenseViewModel viewModel) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: viewModel.selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
+    if (picked != null) {
+      viewModel.setDate(picked);
     }
   }
 
-  void _saveExpense() async {
+  void _saveExpense(AddExpenseViewModel viewModel) async {
     if (_formKey.currentState!.validate()) {
-      final amount = double.parse(_amountController.text);
-
-      final entry = ExpenseRecord(
-        id: '',
-        amount: amount,
-        category: _selectedCategory,
-        description: _descriptionController.text,
-        expenseDate: _selectedDate,
-        proofImagePath: _proofImagePath,
-        isTaxDeductible: _isTaxDeductible,
-        createdAt: DateTime.now(),
+      final success = await viewModel.saveExpense(
+        _amountController.text,
+        _descriptionController.text,
       );
 
-      await financeService.insertExpense(entry);
-
-      if (mounted) {
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Expense saved successfully')),
         );
         Navigator.pop(context);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save expense. Check login status.')),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<AddExpenseViewModel>();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -144,32 +127,78 @@ class _AddExpensePageState extends State<AddExpensePage> {
                     
                     _buildLabel('Category'),
                     DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      value: viewModel.selectedCategory,
                       decoration: _inputDecoration(''),
-                      items: _categories.map((String category) {
+                      items: viewModel.categories.map((String category) {
                         return DropdownMenuItem(value: category, child: Text(category));
                       }).toList(),
                       onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedCategory = newValue!;
-                        });
+                        if (newValue != null) {
+                          viewModel.setCategory(newValue);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
 
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _isTaxDeductible,
-                          onChanged: (value) {
-                            setState(() {
-                              _isTaxDeductible = value ?? false;
-                            });
-                          },
-                          activeColor: Colors.purple,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: viewModel.isCategoryDeductible ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: viewModel.isCategoryDeductible ? Colors.green.shade300 : Colors.red.shade300,
+                          width: 1.5,
                         ),
-                        const Text('Tax Deductible', style: TextStyle(fontSize: 16)),
-                      ],
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: viewModel.isTaxDeductible,
+                            fillColor: WidgetStateProperty.resolveWith((states) {
+                              if (!viewModel.isCategoryDeductible) return Colors.red.shade200;
+                              if (states.contains(WidgetState.selected)) return Colors.purple;
+                              return Colors.white;
+                            }),
+                            onChanged: viewModel.isCategoryDeductible 
+                              ? (value) => viewModel.setTaxDeductible(value ?? false)
+                              : null,
+                            activeColor: Colors.purple,
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tax Deductible', 
+                                  style: TextStyle(
+                                    fontSize: 16, 
+                                    fontWeight: FontWeight.bold,
+                                    color: viewModel.isCategoryDeductible ? Colors.black : Colors.red.shade900,
+                                  ),
+                                ),
+                                Text(
+                                  viewModel.isCategoryDeductible 
+                                      ? 'This category qualifies for tax relief'
+                                      : 'Not eligible for Malaysian tax relief',
+                                  style: TextStyle(
+                                    fontSize: 11, 
+                                    color: viewModel.isCategoryDeductible ? Colors.green.shade700 : Colors.red.shade700, 
+                                    fontWeight: FontWeight.bold
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Icon(
+                              viewModel.isCategoryDeductible ? Icons.check_circle : Icons.error_outline, 
+                              color: viewModel.isCategoryDeductible ? Colors.green : Colors.red, 
+                              size: 24
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
 
@@ -178,7 +207,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                     
                     _buildLabel('Date'),
                     InkWell(
-                      onTap: () => _selectDate(context),
+                      onTap: () => _selectDate(context, viewModel),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                         decoration: BoxDecoration(
@@ -188,7 +217,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                            Text(DateFormat('dd/MM/yyyy').format(viewModel.selectedDate)),
                             const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
                           ],
                         ),
@@ -198,7 +227,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
                     _buildLabel('Proof'),
                     GestureDetector(
-                      onTap: _pickImage,
+                      onTap: () => _pickImage(viewModel),
                       child: Container(
                         width: double.infinity,
                         height: 150,
@@ -207,7 +236,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                           borderRadius: BorderRadius.circular(10),
                           color: Colors.grey.shade50,
                         ),
-                        child: _proofImagePath == null
+                        child: viewModel.proofImagePath == null
                             ? const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -218,7 +247,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                               )
                             : ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: Image.file(File(_proofImagePath!), fit: BoxFit.cover),
+                                child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
                               ),
                       ),
                     ),
@@ -227,7 +256,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: _saveExpense,
+                        onPressed: () => _saveExpense(viewModel),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
