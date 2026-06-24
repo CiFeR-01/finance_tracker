@@ -81,11 +81,6 @@ class HomeContent extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (viewModel.incomes.isEmpty && viewModel.expenses.isEmpty)
-                        const Tooltip(
-                          message: "No data found in Firestore",
-                          child: Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                        ),
                     ],
                   ),
                   const Text(
@@ -95,14 +90,6 @@ class HomeContent extends StatelessWidget {
                       fontSize: 16,
                     ),
                   ),
-                  if (viewModel.incomes.isEmpty && viewModel.expenses.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        'Check Firestore userId field!',
-                        style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
                 ],
               ),
             ),

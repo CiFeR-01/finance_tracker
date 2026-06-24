@@ -28,13 +28,19 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final data = await _authService.getUserData(user.uid);
-      setState(() {
-        _userModel = data;
-        if (data != null) {
+      if (data == null) {
+        // If the user document doesn't exist in Firestore, log out immediately
+        await _authService.logout();
+        return;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _userModel = data;
           _nameController.text = data.name;
-        }
-        _isLoading = false;
-      });
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -166,11 +172,46 @@ class _ProfilePageState extends State<ProfilePage> {
                 _userModel = _userModel!.copyWithTaxProfile(isParentsMedical: val);
               });
             }),
+
+            const SizedBox(height: 30),
+            const Text('Security', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple)),
+            const SizedBox(height: 15),
+            ListTile(
+              title: const Text('Reset Password'),
+              subtitle: const Text('Send a password reset link to your email'),
+              leading: const Icon(Icons.lock_outline, color: Colors.purple),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              contentPadding: EdgeInsets.zero,
+              onTap: () => _sendResetEmail(),
+            ),
             const SizedBox(height: 40),
           ],
         ),
       ),
     );
+  }
+
+  void _sendResetEmail() async {
+    try {
+      await _authService.sendPasswordResetEmail(_userModel!.email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset link sent to your email!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildInfoTile(String label, TextEditingController controller, {required bool isEditable}) {

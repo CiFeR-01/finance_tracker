@@ -59,6 +59,16 @@ class AuthService {
     await _auth.signOut();
   }
 
+  // Send Password Reset Email
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      print('Password reset error: $e');
+      rethrow;
+    }
+  }
+
   // Update Profile
   Future<void> updateProfile(UserModel user) async {
     await _db.collection('users').doc(user.uid).update(user.toMap());

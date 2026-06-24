@@ -26,17 +26,7 @@ void main() async {
 
   financeService = FinanceService();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
-        ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
-        ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
-        ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
-      ],
-      child: const FinanceTrackerApp(),
-    ),
-  );
+  runApp(const FinanceTrackerApp());
 }
 
 class FinanceTrackerApp extends StatelessWidget {
@@ -58,8 +48,19 @@ class FinanceTrackerApp extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
+          
           if (snapshot.hasData) {
-            return const HomePage();
+            // Added ValueKey to force recreation of all ViewModels when UID changes
+            return MultiProvider(
+              key: ValueKey(snapshot.data?.uid),
+              providers: [
+                ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
+                ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
+                ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
+                ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
+              ],
+              child: const HomePage(),
+            );
           }
           return const LoginPage();
         },
