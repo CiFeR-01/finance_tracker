@@ -1,83 +1,12 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.buildlog/
-.history
-.svn/
-migrate_working_dir/
+# Firebase configuration files (if you want to keep them private)
+google-services.json
+GoogleService-Info.plist
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The Python extension for Visual Studio Code creates __pycache__ folders
-# for its internal use of Python packages.
-__pycache__/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter/Dart build files
 .dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
 .packages
 .pub-cache/
-.pub/
-/build/
+build/
 
-# Android related
-**/android/**/generated/
-**/android/external/
-**/android/gen/
-**/android/local.properties
-**/android/repository/
-**/android/vendor/
-.gradle/
-android/app/src/main/res/values/google-services.xml
-
-# iOS related
-**/ios/Flutter/App.framework
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/flutter_export_environment.sh
-**/ios/Flutter/flutter_podhelper.rb
-**/ios/Pods/
-**/ios/Runner/GeneratedPluginRegistrant.h
-**/ios/Runner/GeneratedPluginRegistrant.m
-**/ios/DerivedData/
-**/ios/.generated/
-**/ios/.tmp/
-**/ios/*.xcworkspace
-**/ios/*.lock
-
-# Symbolication related
-app.*.symbols
-app.*.map.json
-
-# Bndl related
-**/*.aar
-**/*.ap_
-**/*.apk
-**/*.bundle
-**/*.cab
-**/*.dex
-**/*.dll
-**/*.exe
-**/*.exp
-**/*.gz
-**/*.img
-**/*.jar
-**/*.lib
-**/*.msi
-**/*.msm
-**/*.msp
-**/*.pyo
-**/*.so
-**/*.tar
-**/*.tgz
-**/*.zip
+# Local environment secrets
+.env
