@@ -8,6 +8,7 @@ import '../widgets/bottom_nav_bar.dart';
 import 'add_page.dart';
 import 'tax_page.dart';
 import 'profile_page.dart';
+import 'report_page.dart';
 import '../viewmodels/home_view_model.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     const HomeContent(),
     const AddPage(),
-    const Center(child: Text('Report Page')),
+    const ReportPage(),
     const TaxPage(),
     const ProfilePage(),
   ];
