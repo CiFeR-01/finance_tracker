@@ -81,7 +81,7 @@ class TaxViewModel extends ChangeNotifier {
       },
       {
         'title': 'Private Retirement Scheme (PRS)',
-        'amount': _sumExpenses(['Private Retirement Scheme']),
+        'amount': _sumExpenses(['PRS']),
         'limit': 3000.0,
       },
       {
@@ -164,40 +164,4 @@ class TaxViewModel extends ChangeNotifier {
   }
 
   bool get hasNoRecords => _incomes.isEmpty && _expenses.isEmpty;
-
-  List<dynamic> getTransactionsForRelief(String title) {
-    if (title == 'Life Insurance and EPF') {
-      return _incomes.where((i) => i.epfAmount > 0).toList();
-    }
-    if (title == 'SOCSO Contribution') {
-      return _incomes.where((i) => i.socsoAmount > 0).toList();
-    }
-    
-    // Mapping titles to categories used in _sumExpenses
-    final Map<String, List<String>> categoryMapping = {
-      'Private Retirement Scheme (PRS)': ['Private Retirement Scheme'],
-      'Education and Medical Insurance': ['Insurance'],
-      'Medical Expenses': ['Medical expenses'],
-      'Health Screening': ['Health screening'],
-      'Lifestyle': ['Lifestyle'],
-      'Sports Lifestyle': ['Sports lifestyle'],
-      'Education Fees': ['Education fees'],
-      'Childcare Fees': ['Childcare fees'],
-      'SSPN Net Deposit': ['SSPN net deposit'],
-      'Breastfeeding Equipment': ['Breastfeeding equipment'],
-      'EV Charging / Composting Machine': ['EV charging / composting machine'],
-      'Housing Loan Interest': ['Housing loan interest'],
-      'Total Donations': ['Donation/Gift'],
-      'Zakat': ['Zakat'],
-    };
-
-    final categories = categoryMapping[title];
-    if (categories != null) {
-      return _expenses
-          .where((e) => e.isTaxDeductible && categories.contains(e.category))
-          .toList();
-    }
-
-    return [];
-  }
 }
