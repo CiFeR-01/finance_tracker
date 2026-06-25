@@ -61,11 +61,19 @@ class _ProfilePageState extends State<ProfilePage> {
         _isEditing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        const SnackBar(
+          content: Text('Profile updated successfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Update failed: $e')),
+        SnackBar(
+          content: Text('Update failed: $e'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -151,11 +159,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
                         ),
                         child: CircleAvatar(
                           radius: 45,
-                          backgroundColor: Colors.white.withOpacity(0.2),
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
                           child: Text(
                             _userModel!.name.isNotEmpty ? _userModel!.name[0].toUpperCase() : '?',
                             style: const TextStyle(
@@ -179,7 +187,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Text(
                       _userModel!.email,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 14,
                       ),
                     ),
@@ -318,7 +326,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -392,7 +400,7 @@ class _ProfilePageState extends State<ProfilePage> {
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       ),
       value: value,
-      activeColor: Colors.purple,
+      activeThumbColor: Colors.purple,
       onChanged: _isEditing ? onChanged : null,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
