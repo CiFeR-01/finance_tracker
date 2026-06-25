@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/finance_tracker.iml" filepath="$PROJECT_DIR$/.idea/finance_tracker.iml" />
-      <module fileurl="file://$PROJECT_DIR$/android/finance_tracker_android.iml" filepath="$PROJECT_DIR$/android/finance_tracker_android.iml" />
     </modules>
   </component>
 </project>

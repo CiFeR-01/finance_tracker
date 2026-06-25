@@ -9,6 +9,7 @@ class HomeViewModel extends ChangeNotifier {
 
   List<IncomeRecord> _incomes = [];
   List<ExpenseRecord> _expenses = [];
+  int _selectedMonth = DateTime.now().month;
   
   StreamSubscription? _incomeSub;
   StreamSubscription? _expenseSub;
@@ -31,22 +32,38 @@ class HomeViewModel extends ChangeNotifier {
     super.dispose();
   }
 
+  int get selectedMonth => _selectedMonth;
+
+  void setSelectedMonth(int month) {
+    _selectedMonth = month;
+    notifyListeners();
+  }
+
   List<IncomeRecord> get incomes => _incomes;
   List<ExpenseRecord> get expenses => _expenses;
 
-  double get totalIncome => _incomes.fold(0, (sum, item) => sum + item.netIncome);
-  double get totalExpenses => _expenses.fold(0, (sum, item) => sum + item.amount);
+  List<IncomeRecord> get filteredIncomes => _incomes
+      .where((i) => i.incomeDate.month == _selectedMonth)
+      .toList();
+
+  List<ExpenseRecord> get filteredExpenses => _expenses
+      .where((e) => e.expenseDate.month == _selectedMonth)
+      .toList();
+
+  double get totalIncome => filteredIncomes.fold(0, (sum, item) => sum + item.netIncome);
+  double get totalExpenses => filteredExpenses.fold(0, (sum, item) => sum + item.amount);
   
-  double get taxReclaimable => _expenses
+  double get taxReclaimable => filteredExpenses
       .where((e) => e.isTaxDeductible)
       .fold(0, (sum, item) => sum + item.amount);
       
   double get savings => totalIncome - totalExpenses;
 
   String get mostSpentCategory {
-    if (_expenses.isEmpty) return 'None';
+    final currentExpenses = filteredExpenses;
+    if (currentExpenses.isEmpty) return 'None';
     Map<String, double> categoryMap = {};
-    for (var e in _expenses) {
+    for (var e in currentExpenses) {
       categoryMap[e.category] = (categoryMap[e.category] ?? 0) + e.amount;
     }
     String category = 'None';
@@ -61,9 +78,10 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   double get mostSpentAmount {
-    if (_expenses.isEmpty) return 0;
+    final currentExpenses = filteredExpenses;
+    if (currentExpenses.isEmpty) return 0;
     Map<String, double> categoryMap = {};
-    for (var e in _expenses) {
+    for (var e in currentExpenses) {
       categoryMap[e.category] = (categoryMap[e.category] ?? 0) + e.amount;
     }
     double amount = 0;

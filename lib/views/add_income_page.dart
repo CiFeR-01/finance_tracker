@@ -22,6 +22,14 @@ class _AddIncomePageState extends State<AddIncomePage> {
   final _pcbController = TextEditingController();
   final _descriptionController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AddIncomeViewModel>().clearData();
+    });
+  }
+
   Future<void> _pickImage(AddIncomeViewModel viewModel) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);

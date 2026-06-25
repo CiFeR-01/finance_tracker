@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/most_spent_card.dart';
 import '../widgets/monthly_comparison_card.dart';
@@ -56,7 +57,6 @@ class HomeContent extends StatelessWidget {
         // 1. Top Header with Purple Gradient
         Container(
           width: double.infinity,
-          height: 160,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
@@ -66,20 +66,49 @@ class HomeContent extends StatelessWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+              padding: const EdgeInsets.fromLTRB(20.0, 10.0, 20.0, 20.0),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'FinanceTracker',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                      const Expanded(
+                        child: Text(
+                          'FinanceTracker',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      DropdownButton<int>(
+                        value: viewModel.selectedMonth,
+                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE1BEE7)),
+                        underline: Container(),
+                        dropdownColor: const Color(0xFF7B1FA2),
+                        onChanged: (int? newValue) {
+                          if (newValue != null) {
+                            viewModel.setSelectedMonth(newValue);
+                          }
+                        },
+                        items: List.generate(12, (index) => index + 1).map((int month) {
+                          final isSelected = month == viewModel.selectedMonth;
+                          return DropdownMenuItem<int>(
+                            value: month,
+                            child: Text(
+                              DateFormat('MMM').format(DateTime(2024, month)),
+                              style: TextStyle(
+                                color: isSelected ? const Color(0xFFE1BEE7) : Colors.white,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),

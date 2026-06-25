@@ -34,37 +34,41 @@ class FinanceTrackerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FinanceTracker',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
-      home: StreamBuilder<User?>(
-        stream: AuthService().userStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          
-          if (snapshot.hasData) {
-            // Added ValueKey to force recreation of all ViewModels when UID changes
-            return MultiProvider(
-              key: ValueKey(snapshot.data?.uid),
-              providers: [
-                ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
-                ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
-                ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
-                ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
-              ],
-              child: const HomePage(),
-            );
-          }
-          return const LoginPage();
-        },
-      ),
+    return StreamBuilder<User?>(
+      stream: AuthService().userStream,
+      builder: (context, snapshot) {
+        final uid = snapshot.data?.uid;
+
+        return MultiProvider(
+          key: ValueKey(uid),
+          providers: [
+            ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
+            ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
+            ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
+            ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
+          ],
+          child: MaterialApp(
+            title: 'FinanceTracker',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
+              useMaterial3: true,
+              fontFamily: 'Roboto',
+            ),
+            home: _buildHome(snapshot),
+          ),
+        );
+      },
     );
+  }
+
+  Widget _buildHome(AsyncSnapshot<User?> snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (snapshot.hasData) {
+      return const HomePage();
+    }
+    return const LoginPage();
   }
 }

@@ -35,14 +35,18 @@ class MostSpentCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                category,
-                style: const TextStyle(
-                  color: Colors.purpleAccent,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  category,
+                  style: const TextStyle(
+                    color: Colors.purpleAccent,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 amount,
                 style: const TextStyle(

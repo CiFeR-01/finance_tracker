@@ -83,6 +83,14 @@ class AddExpenseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearData() {
+    _selectedCategory = 'Medical expenses';
+    _selectedDate = DateTime.now();
+    _proofImagePath = null;
+    _isTaxDeductible = true;
+    notifyListeners();
+  }
+
   Future<bool> saveExpense(String amountStr, String description) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;

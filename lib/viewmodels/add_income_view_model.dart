@@ -42,6 +42,13 @@ class AddIncomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearData() {
+    _selectedCategory = 'Salary';
+    _selectedDate = DateTime.now();
+    _proofImagePath = null;
+    notifyListeners();
+  }
+
   Future<bool> saveIncome({
     required String totalIncomeStr,
     required String epfStr,
