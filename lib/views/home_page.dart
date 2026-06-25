@@ -6,6 +6,7 @@ import '../widgets/most_spent_card.dart';
 import '../widgets/monthly_comparison_card.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'add_page.dart';
+import 'report_page.dart';
 import 'tax_page.dart';
 import 'profile_page.dart';
 import '../viewmodels/home_view_model.dart';
@@ -23,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     const HomeContent(),
     const AddPage(),
-    const Center(child: Text('Report Page')),
+    const ReportPage(),
     const TaxPage(),
     const ProfilePage(),
   ];
