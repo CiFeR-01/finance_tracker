@@ -1,10 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import '../models/income_record.dart';
+import '../models/expense_record.dart';
 import '../viewmodels/tax_view_model.dart';
 
 class TaxPage extends StatelessWidget {
   const TaxPage({super.key});
+
+  void _showTransactions(BuildContext context, String title, List<dynamic> transactions) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 10),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.purple),
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: transactions.isEmpty
+                  ? const Center(child: Text('No transactions found'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: transactions.length,
+                      itemBuilder: (context, index) {
+                        final tx = transactions[index];
+                        if (tx is IncomeRecord) {
+                          double amount = 0;
+                          if (title == 'Life Insurance and EPF') amount = tx.epfAmount;
+                          if (title == 'SOCSO Contribution') amount = tx.socsoAmount;
+                          
+                          return ListTile(
+                            title: Text(tx.category),
+                            subtitle: Text(DateFormat('dd MMM yyyy').format(tx.incomeDate)),
+                            trailing: Text('RM ${amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                          );
+                        } else if (tx is ExpenseRecord) {
+                          return ListTile(
+                            title: Text(tx.category),
+                            subtitle: Text(DateFormat('dd MMM yyyy').format(tx.expenseDate)),
+                            trailing: Text('RM ${tx.amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +86,16 @@ class TaxPage extends StatelessWidget {
 
     if (viewModel.userModel == null) {
       return const Scaffold(body: Center(child: Text('User profile not found.')));
+    }
+
+    final fixedReliefs = viewModel.userModel!.taxProfile.getFixedReliefItems();
+    final fixedTitles = fixedReliefs.map((e) => e['title'] as String).toList();
+
+    bool checkIfFixed(String title) {
+      if (fixedTitles.contains(title)) return true;
+      if (title.startsWith('Child Relief')) return true;
+      if (title.startsWith('Disabled Child')) return true;
+      return false;
     }
 
     if (viewModel.hasNoRecords) {
@@ -111,10 +186,20 @@ class TaxPage extends StatelessWidget {
                         separatorBuilder: (context, index) => const SizedBox(height: 20),
                         itemBuilder: (context, index) {
                           final item = claimedReliefs[index];
-                          return _buildReliefItem(
-                            item['title'],
-                            item['amount'],
-                            item['limit'],
+                          final title = item['title'] as String;
+                          final isFixed = checkIfFixed(title);
+
+                          return InkWell(
+                            onTap: isFixed ? null : () {
+                              final txs = viewModel.getTransactionsForRelief(title);
+                              _showTransactions(context, title, txs);
+                            },
+                            child: _buildReliefItem(
+                              title,
+                              item['amount'],
+                              item['limit'],
+                              isClickable: !isFixed,
+                            ),
                           );
                         },
                       ),
@@ -129,7 +214,14 @@ class TaxPage extends StatelessWidget {
                 child: Text('Donations & Gifts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple)),
               ),
               const SizedBox(height: 12),
-              _buildSimpleInfoCard('Total Donations', viewModel.totalDonations),
+              _buildSimpleInfoCard(
+                'Total Donations',
+                viewModel.totalDonations,
+                onTap: () {
+                  final txs = viewModel.getTransactionsForRelief('Total Donations');
+                  _showTransactions(context, 'Donations & Gifts', txs);
+                },
+              ),
               const SizedBox(height: 24),
             ],
             if (viewModel.totalZakat > 0) ...[
@@ -138,7 +230,15 @@ class TaxPage extends StatelessWidget {
                 child: Text('Tax Rebates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple)),
               ),
               const SizedBox(height: 12),
-              _buildSimpleInfoCard('Zakat', viewModel.totalZakat, isRebate: true),
+              _buildSimpleInfoCard(
+                'Zakat',
+                viewModel.totalZakat,
+                isRebate: true,
+                onTap: () {
+                  final txs = viewModel.getTransactionsForRelief('Zakat');
+                  _showTransactions(context, 'Zakat', txs);
+                },
+              ),
               const SizedBox(height: 24),
             ],
             Center(
@@ -159,57 +259,73 @@ class TaxPage extends StatelessWidget {
     );
   }
 
-  Widget _buildReliefItem(String title, double current, double limit) {
+  Widget _buildReliefItem(String title, double current, double limit, {bool isClickable = false}) {
     double progress = (current / limit).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        Container(
-          height: 12,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(6),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
+              if (isClickable) const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+            ],
           ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress,
-            child: Container(
-              decoration: BoxDecoration(
-                color: progress >= 1.0 ? Colors.orange : Colors.purple,
-                borderRadius: BorderRadius.circular(6),
+          const SizedBox(height: 8),
+          Container(
+            height: 12,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: progress,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: progress >= 1.0 ? Colors.orange : Colors.purple,
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            'RM ${current.toStringAsFixed(0)} / ${limit.toStringAsFixed(0)}',
-            style: TextStyle(
-              fontSize: 13, 
-              color: progress >= 1.0 ? Colors.orange.shade900 : Colors.black54,
-              fontWeight: progress >= 1.0 ? FontWeight.bold : FontWeight.normal
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'RM ${current.toStringAsFixed(0)} / ${limit.toStringAsFixed(0)}',
+              style: TextStyle(
+                fontSize: 13, 
+                color: progress >= 1.0 ? Colors.orange.shade900 : Colors.black54,
+                fontWeight: progress >= 1.0 ? FontWeight.bold : FontWeight.normal
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildSimpleInfoCard(String title, double amount, {bool isRebate = false}) {
+  Widget _buildSimpleInfoCard(String title, double amount, {bool isRebate = false, VoidCallback? onTap}) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade300)),
       color: Colors.white,
       child: ListTile(
+        onTap: onTap,
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-        trailing: Text(
-          'RM ${amount.toStringAsFixed(2)}',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isRebate ? Colors.green.shade700 : Colors.black),
+        trailing: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'RM ${amount.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isRebate ? Colors.green.shade700 : Colors.black),
+            ),
+            if (onTap != null) const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+          ],
         ),
       ),
     );
