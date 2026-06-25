@@ -44,14 +44,11 @@ class _AddTaxExemptionPageState extends State<AddTaxExemptionPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Defines the exact purple color from your wireframe
-    const wireframePurple = Color(0xFF8A2BE2);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Tax Exemption',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: wireframePurple,
+        backgroundColor: Colors.purple,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
@@ -155,7 +152,7 @@ class _AddTaxExemptionPageState extends State<AddTaxExemptionPage> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: wireframePurple,
+                  backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -173,7 +170,7 @@ class _AddTaxExemptionPageState extends State<AddTaxExemptionPage> {
                     // Logic to send data to Firebase will go here
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: wireframePurple,
+                    backgroundColor: Colors.purple,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
