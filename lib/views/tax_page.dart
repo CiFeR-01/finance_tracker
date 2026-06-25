@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../viewmodels/tax_view_model.dart';
+import 'add_tax_exemption_page.dart';
 
 class TaxPage extends StatelessWidget {
   const TaxPage({super.key});
@@ -40,7 +41,12 @@ class TaxPage extends StatelessWidget {
                 const Text('No records found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/add'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AddTaxExemptionPage()),
+                    );
+                  },
                   child: const Text('Add a Record'),
                 )
               ],
