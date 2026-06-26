@@ -100,27 +100,47 @@ class TaxPage extends StatelessWidget {
 
     if (viewModel.hasNoRecords) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Tax Dashboard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.purple,
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.search_off, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('No records found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/add'),
-                  child: const Text('Add a Record'),
-                )
-              ],
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            // This is your new premium header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(top: 60, bottom: 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)]),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+              ),
+              child: const Center(
+                child: Text('Tax Dashboard', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+              ),
             ),
-          ),
+
+            // This is your centered "No records" content
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.search_off, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text('No records found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pushNamed(context, '/add'),
+                        child: const Text('Add a Record'),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
