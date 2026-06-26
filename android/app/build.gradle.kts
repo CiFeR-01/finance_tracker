@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("kotlin-android") // This was the missing line that broke the app!
     id("com.google.gms.google-services")
     id("dev.flutter.flutter-gradle-plugin")
 }

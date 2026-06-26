@@ -43,8 +43,8 @@ dependencies:
   cloud_firestore: ^5.6.0
   firebase_auth: ^5.4.0
   provider: ^6.1.2
-  pdf: ^3.13.0
-  printing: ^5.15.0
+  pdf: any
+  printing: any
 
 dev_dependencies:
   flutter_test:
