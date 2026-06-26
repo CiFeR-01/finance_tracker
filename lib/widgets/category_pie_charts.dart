@@ -164,25 +164,20 @@ class CategoryPieCharts extends StatelessWidget {
   }
 
   Color _getColorForIndex(int index, Color baseColor) {
-    final List<Color> greenPalette = [
-      Colors.green.shade700,
-      Colors.green.shade400,
-      Colors.teal.shade300,
-      Colors.lightGreen.shade400,
-      Colors.greenAccent.shade700,
-    ];
-    final List<Color> redPalette = [
-      Colors.red.shade700,
-      Colors.red.shade400,
-      Colors.orange.shade600,
-      Colors.pink.shade400,
-      Colors.deepOrange.shade400,
+    // A distinct palette with high contrast colors
+    final List<Color> distinctPalette = [
+      Colors.blue,
+      Colors.orange,
+      Colors.purple,
+      Colors.cyan,
+      Colors.amber,
+      Colors.indigo,
+      Colors.pink,
+      Colors.teal,
+      Colors.brown,
+      Colors.deepPurple,
     ];
 
-    if (baseColor == Colors.green) {
-      return greenPalette[index % greenPalette.length];
-    } else {
-      return redPalette[index % redPalette.length];
-    }
+    return distinctPalette[index % distinctPalette.length];
   }
 }
