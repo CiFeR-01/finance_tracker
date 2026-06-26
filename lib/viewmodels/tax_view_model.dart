@@ -10,7 +10,7 @@ import '../services/auth_service.dart';
 class TaxViewModel extends ChangeNotifier {
   final FinanceService _financeService;
   final AuthService _authService;
-  
+
   List<IncomeRecord> _incomes = [];
   List<ExpenseRecord> _expenses = [];
   UserModel? _userModel;
@@ -30,7 +30,7 @@ class TaxViewModel extends ChangeNotifier {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final data = await _authService.getUserData(user.uid);
-      
+
       if (data == null) {
         // Document missing in Firestore, force logout
         await _authService.logout();
@@ -38,7 +38,7 @@ class TaxViewModel extends ChangeNotifier {
       }
 
       _userModel = data;
-      
+
       _incomeSub = _financeService.watchAllIncomes().listen((data) {
         _incomes = data;
         notifyListeners();
@@ -61,7 +61,7 @@ class TaxViewModel extends ChangeNotifier {
 
   List<Map<String, dynamic>> get reliefItems {
     final List<Map<String, dynamic>> items = [];
-    
+
     // 1. Fixed Reliefs from Profile
     if (_userModel != null) {
       items.addAll(_userModel!.taxProfile.getFixedReliefItems());
@@ -81,7 +81,7 @@ class TaxViewModel extends ChangeNotifier {
       },
       {
         'title': 'Private Retirement Scheme (PRS)',
-        'amount': _sumExpenses(['PRS']),
+        'amount': _sumExpenses(['Private Retirement Scheme']),
         'limit': 3000.0,
       },
       {
@@ -140,7 +140,7 @@ class TaxViewModel extends ChangeNotifier {
         'limit': 7000.0,
       },
     ]);
-    
+
     return items;
   }
 
@@ -164,4 +164,40 @@ class TaxViewModel extends ChangeNotifier {
   }
 
   bool get hasNoRecords => _incomes.isEmpty && _expenses.isEmpty;
+
+  List<dynamic> getTransactionsForRelief(String title) {
+    if (title == 'Life Insurance and EPF') {
+      return _incomes.where((i) => i.epfAmount > 0).toList();
+    }
+    if (title == 'SOCSO Contribution') {
+      return _incomes.where((i) => i.socsoAmount > 0).toList();
+    }
+
+    // Mapping titles to categories used in _sumExpenses
+    final Map<String, List<String>> categoryMapping = {
+      'Private Retirement Scheme (PRS)': ['Private Retirement Scheme'],
+      'Education and Medical Insurance': ['Insurance'],
+      'Medical Expenses': ['Medical expenses'],
+      'Health Screening': ['Health screening'],
+      'Lifestyle': ['Lifestyle'],
+      'Sports Lifestyle': ['Sports lifestyle'],
+      'Education Fees': ['Education fees'],
+      'Childcare Fees': ['Childcare fees'],
+      'SSPN Net Deposit': ['SSPN net deposit'],
+      'Breastfeeding Equipment': ['Breastfeeding equipment'],
+      'EV Charging / Composting Machine': ['EV charging / composting machine'],
+      'Housing Loan Interest': ['Housing loan interest'],
+      'Total Donations': ['Donation/Gift'],
+      'Zakat': ['Zakat'],
+    };
+
+    final categories = categoryMapping[title];
+    if (categories != null) {
+      return _expenses
+          .where((e) => e.isTaxDeductible && categories.contains(e.category))
+          .toList();
+    }
+
+    return [];
+  }
 }
