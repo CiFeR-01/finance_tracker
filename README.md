@@ -26,41 +26,35 @@ The project follows the **MVVM (Model-View-ViewModel)** pattern with **Provider*
 - **ViewModels**: Logic handlers that bridge Models and Views (`HomeViewModel`, `AddExpenseViewModel`, etc.).
 - **Services**: Abstracted data access layers (`AuthService`, `FinanceService`).
 
-## 🛠️ Tech Stack
+## 📁 Project Structure
 
-- **Frontend**: Flutter (Dart)
-- **Backend**: Firebase Authentication, Cloud Firestore
-- **State Management**: Provider
+The project is organized into a modular structure to ensure maintainability and scalability:
 
-## 🏁 Getting Started
+- **`lib/`**: Contains the core Dart source code.
+  - **`models/`**: Data classes representing the application's domain models.
+  - **`services/`**: Business logic for interacting with external services (Firebase, local storage, etc.).
+  - **`viewmodels/`**: State management logic and UI-independent business logic.
+  - **`views/`**: The visual layer consisting of Flutter widgets and screens.
+  - **`widgets/`**: Reusable UI components shared across multiple views.
+  - **`main.dart`**: The application entry point and root configuration.
+- **`assets/`**: Images, fonts, and other static resources.
 
-### Prerequisites
+## 🛣️ Roadmap & Future Enhancements
 
-- Flutter SDK (Latest Stable)
-- Java 17 (Required for Android build)
-- Firebase Account
+We are continuously working to improve the Finance Tracker. Future updates will include:
 
-### Setup
+- [ ] **Data Export**: Support for exporting financial reports in PDF and Excel formats.
+- [ ] **Expense Categories**: Advanced categorization and tagging for better insights.
+- [ ] **Budgeting**: Tools to set and monitor monthly budgets for different categories.
+- [ ] **Notifications**: Reminders for recurring bills and tax filing deadlines.
+- [ ] **Multi-currency Support**: For users who manage finances across different regions.
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/CiFeR-01/finance_tracker.git
-   cd finance_tracker
-   ```
+## 🤝 Contributing
 
-2. **Install Dependencies**:
-   ```bash
-   flutter pub get
-   ```
+Contributions are welcome! If you have suggestions or find bugs, feel free to open an issue or submit a pull request.
 
-3. **Firebase Configuration**:
-   - Create a new project in [Firebase Console](https://console.firebase.google.com/).
-   - Add Android/iOS apps.
-   - Download and place `google-services.json` in `android/app/`.
-   - Enable **Email/Password** authentication.
-   - Create a **Firestore Database**.
-
-4. **Run the App**:
-   ```bash
-   flutter run
-   ```
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
