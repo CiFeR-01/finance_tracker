@@ -77,6 +77,30 @@ class HomeViewModel extends ChangeNotifier {
   /// Calculates the net savings for the [selectedMonth] (Income - Expenses).
   double get savings => totalIncome - totalExpenses;
 
+  /// Checks if expenses have reached 90% or more of the total income for the selected month.
+  bool get isExpenseHigh {
+    if (totalIncome <= 0) return false;
+    return (totalExpenses / totalIncome) >= 0.9;
+  }
+
+  /// Returns the percentage of income spent on expenses.
+  double get expensePercentage {
+    if (totalIncome <= 0) return 0;
+    return (totalExpenses / totalIncome) * 100;
+  }
+
+  /// Returns a specific alert message based on the expense-to-income ratio.
+  String get budgetAlertMessage {
+    final percentage = expensePercentage;
+    if (percentage > 100) {
+      return 'Your expenses have exceeded your income this month!';
+    } else if (percentage == 100) {
+      return 'Your expenses have reached 100% of your income.';
+    } else {
+      return 'Your expenses have reached ${percentage.toStringAsFixed(1)}% of your income this month.';
+    }
+  }
+
   /// Identifies the category with the highest spending in the [selectedMonth].
   String get mostSpentCategory {
     final currentExpenses = filteredExpenses;
