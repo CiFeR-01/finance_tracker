@@ -5,6 +5,7 @@ import '../widgets/summary_card.dart';
 import '../widgets/most_spent_card.dart';
 import '../widgets/monthly_comparison_card.dart';
 import '../widgets/selected_month_detail_chart.dart';
+import '../widgets/category_pie_charts.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'add_page.dart';
 import 'tax_page.dart';
@@ -174,6 +175,12 @@ class HomeContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 SelectedMonthDetailChart(
+                  incomes: viewModel.filteredIncomes,
+                  expenses: viewModel.filteredExpenses,
+                  monthName: DateFormat('MMMM').format(DateTime(DateTime.now().year, viewModel.selectedMonth)),
+                ),
+                const SizedBox(height: 20),
+                CategoryPieCharts(
                   incomes: viewModel.filteredIncomes,
                   expenses: viewModel.filteredExpenses,
                   monthName: DateFormat('MMMM').format(DateTime(DateTime.now().year, viewModel.selectedMonth)),
