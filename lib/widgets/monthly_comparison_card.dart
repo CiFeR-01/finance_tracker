@@ -53,7 +53,7 @@ class MonthlyComparisonCard extends StatelessWidget {
       String key = DateFormat('MMM').format(months[i]);
       double inc = monthlyIncomes[key] ?? 0;
       double exp = monthlyExpenses[key] ?? 0;
-      
+
       if (inc > maxAmount) maxAmount = inc;
       if (exp > maxAmount) maxAmount = exp;
 
