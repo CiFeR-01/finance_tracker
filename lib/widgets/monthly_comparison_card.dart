@@ -20,10 +20,11 @@ class MonthlyComparisonCard extends StatelessWidget {
     Map<String, double> monthlyIncomes = {};
     Map<String, double> monthlyExpenses = {};
 
-    // Get last 6 months
+    // Get all months of the current year
     List<DateTime> months = [];
-    for (int i = 5; i >= 0; i--) {
-      months.add(DateTime(DateTime.now().year, DateTime.now().month - i));
+    int currentYear = DateTime.now().year;
+    for (int i = 1; i <= 12; i++) {
+      months.add(DateTime(currentYear, i));
     }
 
     for (var month in months) {
@@ -61,8 +62,8 @@ class MonthlyComparisonCard extends StatelessWidget {
         BarChartGroupData(
           x: i,
           barRods: [
-            BarChartRodData(toY: exp, color: Colors.red, width: 10, borderRadius: BorderRadius.circular(4)),
-            BarChartRodData(toY: inc, color: Colors.green, width: 10, borderRadius: BorderRadius.circular(4)),
+            BarChartRodData(toY: exp, color: Colors.red, width: 6, borderRadius: BorderRadius.circular(2)),
+            BarChartRodData(toY: inc, color: Colors.green, width: 6, borderRadius: BorderRadius.circular(2)),
           ],
         ),
       );
