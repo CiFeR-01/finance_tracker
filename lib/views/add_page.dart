@@ -141,108 +141,56 @@ class AddPage extends StatelessWidget {
 
     return Column(
       children: [
-        // Top Header
+        // NEW: Curved Gradient Header
         Container(
           width: double.infinity,
-          height: 100,
+          padding: const EdgeInsets.only(top: 50, bottom: 20),
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-          ),
-          child: SafeArea(
-            child: Stack(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: DropdownButton<int>(
-                      value: viewModel.selectedMonth,
-                      icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE1BEE7)),
-                      underline: Container(),
-                      dropdownColor: const Color(0xFF7B1FA2),
-                      onChanged: (int? newValue) {
-                        if (newValue != null) {
-                          viewModel.setSelectedMonth(newValue);
-                        }
-                      },
-                      items: List.generate(12, (index) => index + 1).map((int month) {
-                        final isSelected = month == viewModel.selectedMonth;
-                        return DropdownMenuItem<int>(
-                          value: month,
-                          child: Text(
-                            DateFormat('MMM').format(DateTime(2024, month)),
-                            style: TextStyle(
-                              color: isSelected ? const Color(0xFFE1BEE7) : Colors.white, // Light purple if selected
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-                const Center(
-                  child: Text(
-                    'Transactions',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: PopupMenuButton<String>(
-                      icon: const Icon(Icons.add, color: Colors.white, size: 28),
-                      offset: const Offset(0, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                      onSelected: (value) {
-                        if (value == 'income') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const AddIncomePage()),
-                          );
-                        } else if (value == 'expense') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const AddExpensePage()),
-                          );
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'income',
-                          child: Row(
-                            children: [
-                              Icon(Icons.add_circle, color: Colors.green),
-                              SizedBox(width: 10),
-                              Text('Add Income'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'expense',
-                          child: Row(
-                            children: [
-                              Icon(Icons.remove_circle, color: Colors.red),
-                              SizedBox(width: 10),
-                              Text('Add Expense'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
             ),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 16),
+              // Dropdown
+              DropdownButton<int>(
+                value: viewModel.selectedMonth,
+                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
+                underline: Container(),
+                dropdownColor: const Color(0xFF7B1FA2),
+                onChanged: (int? newValue) => newValue != null ? viewModel.setSelectedMonth(newValue) : null,
+                items: List.generate(12, (index) => index + 1).map((int month) => DropdownMenuItem<int>(
+                  value: month,
+                  child: Text(DateFormat('MMM').format(DateTime(2024, month)),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                )).toList(),
+              ),
+              const Spacer(),
+              // Title
+              const Text('Transactions', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              // Add Button
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.add, color: Colors.white, size: 28),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                onSelected: (value) {
+                  if (value == 'income') Navigator.push(context, MaterialPageRoute(builder: (context) => const AddIncomePage()));
+                  else if (value == 'expense') Navigator.push(context, MaterialPageRoute(builder: (context) => const AddExpensePage()));
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'income', child: ListTile(leading: Icon(Icons.add_circle, color: Colors.green), title: Text('Add Income'))),
+                  const PopupMenuItem(value: 'expense', child: ListTile(leading: Icon(Icons.remove_circle, color: Colors.red), title: Text('Add Expense'))),
+                ],
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
         ),
 
