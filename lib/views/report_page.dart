@@ -41,7 +41,7 @@ class _ReportPageState extends State<ReportPage> {
 
       if (filteredIncomes.isEmpty && filteredExpenses.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No data available for the selected month.')),
+          const SnackBar(content: Text('No Transaction Records available for the selected month.')),
         );
         return;
       }
@@ -73,7 +73,7 @@ class _ReportPageState extends State<ReportPage> {
 
       if (filteredExpenses.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No data available for $_selectedCategory in the selected month.')),
+          SnackBar(content: Text('No expenses available for $_selectedCategory in the selected month.')),
         );
         return;
       }
