@@ -22,9 +22,22 @@ class _AddExpensePageState extends State<AddExpensePage> {
   @override
   void initState() {
     super.initState();
+    _amountController.addListener(_onAmountChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AddExpenseViewModel>().clearData();
     });
+  }
+
+  @override
+  void dispose() {
+    _amountController.removeListener(_onAmountChanged);
+    _amountController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  void _onAmountChanged() {
+    context.read<AddExpenseViewModel>().setAmount(_amountController.text);
   }
 
   Future<void> _pickImage(AddExpenseViewModel viewModel) async {
@@ -140,66 +153,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: viewModel.isCategoryDeductible ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: viewModel.isCategoryDeductible ? Colors.green.shade300 : Colors.red.shade300,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: viewModel.isTaxDeductible,
-                            fillColor: WidgetStateProperty.resolveWith((states) {
-                              if (!viewModel.isCategoryDeductible) return Colors.red.shade200;
-                              if (states.contains(WidgetState.selected)) return Colors.purple;
-                              return Colors.white;
-                            }),
-                            onChanged: viewModel.isCategoryDeductible 
-                              ? (value) => viewModel.setTaxDeductible(value ?? false)
-                              : null,
-                            activeColor: Colors.purple,
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Tax Deductible', 
-                                  style: TextStyle(
-                                    fontSize: 16, 
-                                    fontWeight: FontWeight.bold,
-                                    color: viewModel.isCategoryDeductible ? Colors.black : Colors.red.shade900,
-                                  ),
-                                ),
-                                Text(
-                                  viewModel.isCategoryDeductible 
-                                      ? 'This category qualifies for tax relief'
-                                      : 'Not eligible for Malaysian tax relief',
-                                  style: TextStyle(
-                                    fontSize: 11, 
-                                    color: viewModel.isCategoryDeductible ? Colors.green.shade700 : Colors.red.shade700, 
-                                    fontWeight: FontWeight.bold
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: Icon(
-                              viewModel.isCategoryDeductible ? Icons.check_circle : Icons.error_outline, 
-                              color: viewModel.isCategoryDeductible ? Colors.green : Colors.red, 
-                              size: 24
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildTaxDeductibleSection(viewModel),
                     const SizedBox(height: 16),
 
                     _buildLabel('Descriptions'),
@@ -268,6 +222,74 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   ],
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaxDeductibleSection(AddExpenseViewModel viewModel) {
+    bool isEligible = viewModel.isCategoryDeductible;
+    bool isLimitExceeded = viewModel.isLimitExceeded;
+    
+    Color bgColor = !isEligible ? Colors.red.withOpacity(0.05) : (isLimitExceeded ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1));
+    Color borderColor = !isEligible ? Colors.red.shade200 : (isLimitExceeded ? Colors.orange.shade300 : Colors.green.shade300);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: viewModel.isTaxDeductible,
+            fillColor: WidgetStateProperty.resolveWith((states) {
+              if (!isEligible || isLimitExceeded) return Colors.grey.shade300;
+              if (states.contains(WidgetState.selected)) return Colors.purple;
+              return Colors.white;
+            }),
+            onChanged: (isEligible && !isLimitExceeded)
+              ? (value) => viewModel.setTaxDeductible(value ?? false)
+              : null,
+            activeColor: Colors.purple,
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tax Deductible', 
+                  style: TextStyle(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold,
+                    color: (isEligible && !isLimitExceeded) ? Colors.black : (isLimitExceeded ? Colors.orange.shade900 : Colors.red.shade900),
+                  ),
+                ),
+                Text(
+                  !isEligible 
+                    ? 'Not eligible for Malaysian tax relief'
+                    : (isLimitExceeded 
+                        ? 'Amount exceeds RM ${viewModel.getRemainingLimit(viewModel.selectedCategory).toStringAsFixed(0)} limit' 
+                        : 'This category qualifies for tax relief'),
+                  style: TextStyle(
+                    fontSize: 11, 
+                    color: !isEligible ? Colors.red.shade700 : (isLimitExceeded ? Colors.orange.shade800 : Colors.green.shade700), 
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Icon(
+              !isEligible ? Icons.error_outline : (isLimitExceeded ? Icons.warning_amber_rounded : Icons.check_circle), 
+              color: !isEligible ? Colors.red : (isLimitExceeded ? Colors.orange : Colors.green), 
+              size: 24
             ),
           ),
         ],
