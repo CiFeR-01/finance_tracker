@@ -407,6 +407,7 @@ class _ReportPageState extends State<ReportPage> {
                     prevEx: prevTotalEx,
                     prevSav: prevBalance,
                     prevMonthName: DateFormat('MMMM').format(DateTime(prevYear, prevMonth)),
+                    currentMonthName: DateFormat('MMMM').format(DateTime(2024, _selectedMonth)),
                   ),
                   
                   const SizedBox(height: 30),
@@ -442,6 +443,7 @@ class _ReportPageState extends State<ReportPage> {
     required double prevEx,
     required double prevSav,
     required String prevMonthName,
+    required String currentMonthName,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,7 +454,7 @@ class _ReportPageState extends State<ReportPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Comparing with $prevMonthName results',
+          'Comparing $currentMonthName with $prevMonthName',
           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
         const SizedBox(height: 15),
@@ -465,11 +467,11 @@ class _ReportPageState extends State<ReportPage> {
           ),
           child: Column(
             children: [
-              _buildComparisonRow('Total Income', currentIn, prevIn, Colors.green),
+              _buildComparisonRow('Income ($currentMonthName)', currentIn, prevIn, Colors.green),
               const Divider(height: 30),
-              _buildComparisonRow('Total Expenses', currentEx, prevEx, Colors.red),
+              _buildComparisonRow('Expenses ($currentMonthName)', currentEx, prevEx, Colors.red),
               const Divider(height: 30),
-              _buildComparisonRow('Net Savings', currentSav, prevSav, Colors.blue),
+              _buildComparisonRow('Net Savings ($currentMonthName)', currentSav, prevSav, Colors.blue),
             ],
           ),
         ),
