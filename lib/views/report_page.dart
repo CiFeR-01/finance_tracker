@@ -467,11 +467,11 @@ class _ReportPageState extends State<ReportPage> {
           ),
           child: Column(
             children: [
-              _buildComparisonRow('Income ($currentMonthName)', currentIn, prevIn, Colors.green),
+              _buildComparisonRow('Total Income', currentIn, prevIn, Colors.green, currentMonthName, prevMonthName),
               const Divider(height: 30),
-              _buildComparisonRow('Expenses ($currentMonthName)', currentEx, prevEx, Colors.red),
+              _buildComparisonRow('Total Expenses', currentEx, prevEx, Colors.red, currentMonthName, prevMonthName),
               const Divider(height: 30),
-              _buildComparisonRow('Net Savings ($currentMonthName)', currentSav, prevSav, Colors.blue),
+              _buildComparisonRow('Net Savings', currentSav, prevSav, Colors.blue, currentMonthName, prevMonthName),
             ],
           ),
         ),
@@ -479,7 +479,7 @@ class _ReportPageState extends State<ReportPage> {
     );
   }
 
-  Widget _buildComparisonRow(String title, double current, double prev, Color color) {
+  Widget _buildComparisonRow(String title, double current, double prev, Color color, String currentMonth, String prevMonth) {
     double diff = current - prev;
     bool isIncrease = diff >= 0;
     bool isExpenses = title.toLowerCase().contains('expenses');
@@ -498,10 +498,10 @@ class _ReportPageState extends State<ReportPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87)),
+              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
               const SizedBox(height: 4),
               Text(
-                'Prev: RM ${prev.toStringAsFixed(2)}',
+                '$prevMonth: RM ${prev.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500]),
               ),
             ],
@@ -513,8 +513,8 @@ class _ReportPageState extends State<ReportPage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'RM ${current.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+                '$currentMonth: RM ${current.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
               ),
               const SizedBox(height: 4),
               Row(
