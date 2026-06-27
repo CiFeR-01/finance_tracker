@@ -480,6 +480,13 @@ class _ReportPageState extends State<ReportPage> {
   Widget _buildComparisonRow(String title, double current, double prev, Color color) {
     double diff = current - prev;
     bool isIncrease = diff >= 0;
+    bool isExpenses = title.toLowerCase().contains('expenses');
+    
+    // For expenses, an increase is "bad" (red), decrease is "good" (green)
+    // For income/savings, an increase is "good" (green), decrease is "bad" (red)
+    Color trendColor = isExpenses 
+        ? (isIncrease ? Colors.red : Colors.green) 
+        : (isIncrease ? Colors.green : Colors.red);
     
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -514,15 +521,15 @@ class _ReportPageState extends State<ReportPage> {
                   Icon(
                     isIncrease ? Icons.trending_up : Icons.trending_down,
                     size: 14,
-                    color: isIncrease ? Colors.green : Colors.red,
+                    color: trendColor,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'RM ${diff.abs().toStringAsFixed(2)} ${isIncrease ? 'more' : 'less'}',
+                    'RM ${diff.abs().toStringAsFixed(2)} ${isIncrease ? 'more' : 'lesser'}',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: isIncrease ? Colors.green : Colors.red,
+                      color: trendColor,
                     ),
                   ),
                 ],
