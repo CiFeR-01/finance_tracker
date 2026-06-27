@@ -104,6 +104,17 @@ class _ReportPageState extends State<ReportPage> {
         ? filteredExpenses 
         : filteredExpenses.where((e) => e.category == _selectedCategory).toList();
 
+    // Past month comparison data
+    int prevMonth = _selectedMonth == 1 ? 12 : _selectedMonth - 1;
+    int prevYear = _selectedMonth == 1 ? DateTime.now().year - 1 : DateTime.now().year;
+    
+    final prevIncomes = viewModel.incomes.where((i) => i.incomeDate.month == prevMonth && i.incomeDate.year == prevYear).toList();
+    final prevExpenses = viewModel.expenses.where((e) => e.expenseDate.month == prevMonth && e.expenseDate.year == prevYear).toList();
+    
+    final prevTotalIn = prevIncomes.fold(0.0, (sum, i) => sum + i.netIncome);
+    final prevTotalEx = prevExpenses.fold(0.0, (sum, e) => sum + e.amount);
+    final prevBalance = prevTotalIn - prevTotalEx;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -386,6 +397,17 @@ class _ReportPageState extends State<ReportPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 25),
+
+                  _buildComparisonSection(
+                    currentIn: totalIn,
+                    currentEx: totalEx,
+                    currentSav: balance,
+                    prevIn: prevTotalIn,
+                    prevEx: prevTotalEx,
+                    prevSav: prevBalance,
+                    prevMonthName: DateFormat('MMMM').format(DateTime(prevYear, prevMonth)),
+                  ),
                   
                   const SizedBox(height: 30),
                   // Info Footer
@@ -409,6 +431,106 @@ class _ReportPageState extends State<ReportPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildComparisonSection({
+    required double currentIn,
+    required double currentEx,
+    required double currentSav,
+    required double prevIn,
+    required double prevEx,
+    required double prevSav,
+    required String prevMonthName,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Month-over-Month Comparison',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Comparing with $prevMonthName results',
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              _buildComparisonRow('Total Income', currentIn, prevIn, Colors.green),
+              const Divider(height: 30),
+              _buildComparisonRow('Total Expenses', currentEx, prevEx, Colors.red),
+              const Divider(height: 30),
+              _buildComparisonRow('Net Savings', currentSav, prevSav, Colors.blue),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparisonRow(String title, double current, double prev, Color color) {
+    double diff = current - prev;
+    bool isIncrease = diff >= 0;
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87)),
+              const SizedBox(height: 4),
+              Text(
+                'Prev: RM ${prev.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'RM ${current.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isIncrease ? Icons.trending_up : Icons.trending_down,
+                    size: 14,
+                    color: isIncrease ? Colors.green : Colors.red,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'RM ${diff.abs().toStringAsFixed(2)} ${isIncrease ? 'more' : 'less'}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isIncrease ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
