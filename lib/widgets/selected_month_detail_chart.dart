@@ -159,7 +159,13 @@ class SelectedMonthDetailChart extends StatelessWidget {
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         Padding(
@@ -167,6 +173,7 @@ class SelectedMonthDetailChart extends StatelessWidget {
           child: Text(
             amount,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

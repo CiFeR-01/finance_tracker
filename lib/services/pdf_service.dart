@@ -27,12 +27,8 @@ class PdfService {
             alignment: pw.Alignment.centerRight,
             margin: const pw.EdgeInsets.only(top: 20),
             child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
-                pw.Text(
-                  'Generated on ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                  style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
-                ),
                 pw.Text(
                   'Page ${context.pageNumber} of ${context.pagesCount}',
                   style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
@@ -194,12 +190,8 @@ class PdfService {
             alignment: pw.Alignment.centerRight,
             margin: const pw.EdgeInsets.only(top: 20),
             child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: pw.MainAxisAlignment.end,
               children: [
-                pw.Text(
-                  'Generated on ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                  style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
-                ),
                 pw.Text(
                   'Page ${context.pageNumber} of ${context.pagesCount}',
                   style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
