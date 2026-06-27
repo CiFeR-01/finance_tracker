@@ -28,6 +28,26 @@ class _AddIncomePageState extends State<AddIncomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AddIncomeViewModel>().clearData();
     });
+
+    _epfController.addListener(_onInputChanged);
+    _socsoController.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() {
+    context.read<AddIncomeViewModel>().updateInputs(
+      _epfController.text,
+      _socsoController.text,
+    );
+  }
+
+  @override
+  void dispose() {
+    _epfController.dispose();
+    _socsoController.dispose();
+    _totalIncomeController.dispose();
+    _pcbController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickImage(AddIncomeViewModel viewModel) async {
@@ -130,12 +150,20 @@ class _AddIncomePageState extends State<AddIncomePage> {
                   children: [
                     _buildLabel('Total Income'),
                     _buildTextField(_totalIncomeController, '0.0', isNumber: true),
+
                     _buildLabel('EPF'),
                     _buildTextField(_epfController, 'RM1000', isNumber: true),
+                    if (viewModel.isEpfLimitReached)
+                      _buildLimitWarning('Note: You have already reached the RM ${AddIncomeViewModel.EPF_LIMIT.toInt()} EPF relief limit; this entry won\'t further reduce your tax.'),
+
                     _buildLabel('Socso'),
                     _buildTextField(_socsoController, 'RM30', isNumber: true),
+                    if (viewModel.isSocsoLimitReached)
+                      _buildLimitWarning('Note: You have already reached the RM ${AddIncomeViewModel.SOCSO_LIMIT.toInt()} SOCSO relief limit; this entry won\'t further reduce your tax.'),
+
                     _buildLabel('PCB'),
                     _buildTextField(_pcbController, 'RM1000', isNumber: true),
+
                     _buildLabel('Category'),
                     DropdownButtonFormField<String>(
                       value: viewModel.selectedCategory,
@@ -225,6 +253,16 @@ class _AddIncomePageState extends State<AddIncomePage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+    );
+  }
+
+  Widget _buildLimitWarning(String message) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Text(
+        message,
+        style: const TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w500),
+      ),
     );
   }
 

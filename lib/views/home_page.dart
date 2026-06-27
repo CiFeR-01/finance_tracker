@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/most_spent_card.dart';
 import '../widgets/monthly_comparison_card.dart';
+import '../widgets/selected_month_detail_chart.dart';
+import '../widgets/category_pie_charts.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'add_page.dart';
 import 'tax_page.dart';
@@ -147,6 +149,43 @@ class HomeContent extends StatelessWidget {
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
+                if (viewModel.isExpenseHigh)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade700),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Budget Alert!',
+                                style: TextStyle(
+                                  color: Colors.red.shade900,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                viewModel.budgetAlertMessage,
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -185,6 +224,18 @@ class HomeContent extends StatelessWidget {
                 MostSpentCard(
                   category: viewModel.mostSpentCategory,
                   amount: 'RM ${viewModel.mostSpentAmount.toStringAsFixed(2)}',
+                ),
+                const SizedBox(height: 20),
+                SelectedMonthDetailChart(
+                  incomes: viewModel.filteredIncomes,
+                  expenses: viewModel.filteredExpenses,
+                  monthName: DateFormat('MMMM').format(DateTime(DateTime.now().year, viewModel.selectedMonth)),
+                ),
+                const SizedBox(height: 20),
+                CategoryPieCharts(
+                  incomes: viewModel.filteredIncomes,
+                  expenses: viewModel.filteredExpenses,
+                  monthName: DateFormat('MMMM').format(DateTime(DateTime.now().year, viewModel.selectedMonth)),
                 ),
                 const SizedBox(height: 20),
                 MonthlyComparisonCard(
