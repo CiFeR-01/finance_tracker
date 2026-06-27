@@ -57,7 +57,7 @@ class HomeContent extends StatelessWidget {
 
     return Column(
       children: [
-        // 1. Top Header with Purple Gradient
+        // 1. Top Header with Purple Gradient & Curved Bottom
         Container(
           width: double.infinity,
           decoration: const BoxDecoration(
@@ -65,6 +65,10 @@ class HomeContent extends StatelessWidget {
               colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
             ),
           ),
           child: SafeArea(
@@ -89,30 +93,41 @@ class HomeContent extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      DropdownButton<int>(
-                        value: viewModel.selectedMonth,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE1BEE7)),
-                        underline: Container(),
-                        dropdownColor: const Color(0xFF7B1FA2),
-                        onChanged: (int? newValue) {
-                          if (newValue != null) {
-                            viewModel.setSelectedMonth(newValue);
-                          }
-                        },
-                        items: List.generate(12, (index) => index + 1).map((int month) {
-                          final isSelected = month == viewModel.selectedMonth;
-                          return DropdownMenuItem<int>(
-                            value: month,
-                            child: Text(
-                              DateFormat('MMM').format(DateTime(2024, month)),
-                              style: TextStyle(
-                                color: isSelected ? const Color(0xFFE1BEE7) : Colors.white,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          );
-                        }).toList(),
+
+                      // UPDATED: Glassmorphism Dropdown Button
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: viewModel.selectedMonth,
+                            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                            dropdownColor: const Color(0xFF7B1FA2),
+                            onChanged: (int? newValue) {
+                              if (newValue != null) {
+                                viewModel.setSelectedMonth(newValue);
+                              }
+                            },
+                            items: List.generate(12, (index) => index + 1).map((int month) {
+                              final isSelected = month == viewModel.selectedMonth;
+                              return DropdownMenuItem<int>(
+                                value: month,
+                                child: Text(
+                                  DateFormat('MMM').format(DateTime(2024, month)),
+                                  style: TextStyle(
+                                    color: isSelected ? const Color(0xFFE1BEE7) : Colors.white,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
                       ),
+
                     ],
                   ),
                   const Text(

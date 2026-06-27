@@ -21,23 +21,29 @@ class SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
+        // Added modern shadow for depth
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Flexible(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              overflow: TextOverflow.ellipsis,
+          Text(
+            title,
+            style: TextStyle(
+              color: textColor.withOpacity(0.8), // Slightly softer title color
+              fontSize: 14,
+              fontWeight: FontWeight.w600, // Slightly bolder title
             ),
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8), // Increased spacing for better balance
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -45,7 +51,7 @@ class SummaryCard extends StatelessWidget {
               amount,
               style: TextStyle(
                 color: textColor,
-                fontSize: 22,
+                fontSize: 24, // Slightly larger amount for prominence
                 fontWeight: FontWeight.bold,
               ),
             ),

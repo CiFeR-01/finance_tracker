@@ -38,7 +38,9 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
@@ -55,28 +57,65 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
                   width: 40,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-              const Text('Income Details', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.purple)),
+              const Text(
+                'Income Details',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple,
+                ),
+              ),
               const Divider(height: 32),
-              _buildDetailRow('Amount', 'RM ${income.totalIncome.toStringAsFixed(2)}'),
-              _buildDetailRow('EPF', 'RM ${income.epfAmount.toStringAsFixed(2)}'),
-              _buildDetailRow('Socso', 'RM ${income.socsoAmount.toStringAsFixed(2)}'),
-              _buildDetailRow('PCB', 'RM ${income.pcbAmount.toStringAsFixed(2)}'),
+              _buildDetailRow(
+                'Amount',
+                'RM ${income.totalIncome.toStringAsFixed(2)}',
+              ),
+              _buildDetailRow(
+                'EPF',
+                'RM ${income.epfAmount.toStringAsFixed(2)}',
+              ),
+              _buildDetailRow(
+                'Socso',
+                'RM ${income.socsoAmount.toStringAsFixed(2)}',
+              ),
+              _buildDetailRow(
+                'PCB',
+                'RM ${income.pcbAmount.toStringAsFixed(2)}',
+              ),
               const Divider(height: 32),
-              _buildDetailRow('Net Income', 'RM ${income.netIncome.toStringAsFixed(2)}', isBold: true, color: Colors.green),
+              _buildDetailRow(
+                'Net Income',
+                'RM ${income.netIncome.toStringAsFixed(2)}',
+                isBold: true,
+                color: Colors.green,
+              ),
               _buildDetailRow('Category', income.category),
-              _buildDetailRow('Date', DateFormat('dd MMMM yyyy').format(income.incomeDate)),
+              _buildDetailRow(
+                'Date',
+                DateFormat('dd MMMM yyyy').format(income.incomeDate),
+              ),
               if (income.description != null && income.description!.isNotEmpty)
                 _buildDetailRow('Description', income.description!),
               if (income.proofImagePath != null) ...[
                 const SizedBox(height: 20),
-                const Text('Proof of Income', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Proof of Income',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(15),
-                  child: Image.file(File(income.proofImagePath!), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Text('Image not found')),
+                  child: Image.file(
+                    File(income.proofImagePath!),
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) => const Text('Image not found'),
+                  ),
                 ),
               ],
               const SizedBox(height: 30),
@@ -91,7 +130,9 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
@@ -108,24 +149,53 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
                   width: 40,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-              const Text('Expense Details', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.purple)),
+              const Text(
+                'Expense Details',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple,
+                ),
+              ),
               const Divider(height: 32),
-              _buildDetailRow('Amount', 'RM ${expense.amount.toStringAsFixed(2)}', isBold: true, color: Colors.red),
+              _buildDetailRow(
+                'Amount',
+                'RM ${expense.amount.toStringAsFixed(2)}',
+                isBold: true,
+                color: Colors.red,
+              ),
               _buildDetailRow('Category', expense.category),
-              _buildDetailRow('Date', DateFormat('dd MMMM yyyy').format(expense.expenseDate)),
-              _buildDetailRow('Tax Deductible', expense.isTaxDeductible ? 'Yes' : 'No'),
-              if (expense.description != null && expense.description!.isNotEmpty)
+              _buildDetailRow(
+                'Date',
+                DateFormat('dd MMMM yyyy').format(expense.expenseDate),
+              ),
+              _buildDetailRow(
+                'Tax Deductible',
+                expense.isTaxDeductible ? 'Yes' : 'No',
+              ),
+              if (expense.description != null &&
+                  expense.description!.isNotEmpty)
                 _buildDetailRow('Description', expense.description!),
               if (expense.proofImagePath != null) ...[
                 const SizedBox(height: 20),
-                const Text('Proof of Expense', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Proof of Expense',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(15),
-                  child: Image.file(File(expense.proofImagePath!), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Text('Image not found')),
+                  child: Image.file(
+                    File(expense.proofImagePath!),
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) => const Text('Image not found'),
+                  ),
                 ),
               ],
               const SizedBox(height: 30),
@@ -136,7 +206,12 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isBold = false, Color? color}) {
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -149,7 +224,11 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(fontSize: 16, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -166,11 +245,16 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(200),
         child: Container(
+          width: double.infinity,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
             ),
           ),
           child: SafeArea(
@@ -178,13 +262,19 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       DropdownButton<int>(
                         value: viewModel.selectedMonth,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE1BEE7)),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Color(0xFFE1BEE7),
+                        ),
                         underline: Container(),
                         dropdownColor: const Color(0xFF7B1FA2),
                         onChanged: (int? newValue) {
@@ -192,15 +282,21 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
                             viewModel.setSelectedMonth(newValue);
                           }
                         },
-                        items: List.generate(12, (index) => index + 1).map((int month) {
+                        items: List.generate(12, (index) => index + 1).map((
+                          int month,
+                        ) {
                           final isSelected = month == viewModel.selectedMonth;
                           return DropdownMenuItem<int>(
                             value: month,
                             child: Text(
                               DateFormat('MMMM').format(DateTime(2024, month)),
                               style: TextStyle(
-                                color: isSelected ? const Color(0xFFE1BEE7) : Colors.white,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? const Color(0xFFE1BEE7)
+                                    : Colors.white,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           );
@@ -208,17 +304,37 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
                       ),
                       const Text(
                         'Transactions',
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       PopupMenuButton<String>(
-                        icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 28),
+                        icon: const Icon(
+                          Icons.add_circle_outline,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                         offset: const Offset(0, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
                         onSelected: (value) {
                           if (value == 'income') {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const AddIncomePage()));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AddIncomePage(),
+                              ),
+                            );
                           } else if (value == 'expense') {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const AddExpensePage()));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AddExpensePage(),
+                              ),
+                            );
                           }
                         },
                         itemBuilder: (context) => [
@@ -248,7 +364,10 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 4.0,
+                  ),
                   child: Container(
                     height: 40,
                     decoration: BoxDecoration(
@@ -260,10 +379,19 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'Search transactions...',
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14),
-                        prefixIcon: const Icon(Icons.search, color: Colors.white, size: 20),
+                        hintStyle: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 14,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                        ),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -291,18 +419,19 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildIncomeTab(viewModel),
-          _buildExpenseTab(viewModel),
-        ],
+        children: [_buildIncomeTab(viewModel), _buildExpenseTab(viewModel)],
       ),
     );
   }
 
   Widget _buildIncomeTab(HomeViewModel viewModel) {
-    final filtered = viewModel.filteredIncomes.where((i) =>
-        i.category.toLowerCase().contains(_searchQuery) ||
-        (i.description?.toLowerCase().contains(_searchQuery) ?? false)).toList();
+    final filtered = viewModel.filteredIncomes
+        .where(
+          (i) =>
+              i.category.toLowerCase().contains(_searchQuery) ||
+              (i.description?.toLowerCase().contains(_searchQuery) ?? false),
+        )
+        .toList();
 
     final total = filtered.fold(0.0, (sum, i) => sum + i.netIncome);
 
@@ -325,9 +454,13 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildExpenseTab(HomeViewModel viewModel) {
-    final filtered = viewModel.filteredExpenses.where((e) =>
-        e.category.toLowerCase().contains(_searchQuery) ||
-        (e.description?.toLowerCase().contains(_searchQuery) ?? false)).toList();
+    final filtered = viewModel.filteredExpenses
+        .where(
+          (e) =>
+              e.category.toLowerCase().contains(_searchQuery) ||
+              (e.description?.toLowerCase().contains(_searchQuery) ?? false),
+        )
+        .toList();
 
     final total = filtered.fold(0.0, (sum, e) => sum + e.amount);
 
@@ -365,24 +498,33 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
           children: [
             Icon(icon, size: 60, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text(emptyMessage, style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+            Text(
+              emptyMessage,
+              style: TextStyle(color: Colors.grey[500], fontSize: 16),
+            ),
           ],
         ),
       );
     }
 
-    // Group items by date
-    Map<String, List<dynamic>> grouped = {};
+    final Map<String, List<dynamic>> grouped = {};
+
     for (var item in items) {
-      DateTime date = (item is IncomeRecord) ? item.incomeDate : (item as ExpenseRecord).expenseDate;
-      String key = DateFormat('dd MMMM yyyy').format(date);
-      if (!grouped.containsKey(key)) grouped[key] = [];
+      final DateTime date = item is IncomeRecord
+          ? item.incomeDate
+          : (item as ExpenseRecord).expenseDate;
+
+      final String key = DateFormat('dd MMMM yyyy').format(date);
+
+      if (!grouped.containsKey(key)) {
+        grouped[key] = [];
+      }
+
       grouped[key]!.add(item);
     }
 
-    List<String> sortedKeys = grouped.keys.toList();
-    // In a real app, you'd sort these keys chronologically.
-    
+    final List<String> sortedKeys = grouped.keys.toList();
+
     return Column(
       children: [
         Container(
@@ -393,11 +535,18 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
             children: [
               Text(
                 'Monthly Total:',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
               ),
               Text(
                 'RM ${total.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
             ],
           ),
@@ -407,14 +556,17 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             itemCount: grouped.length,
             itemBuilder: (context, index) {
-              String dateKey = sortedKeys[index];
-              List<dynamic> dateItems = grouped[dateKey]!;
-              
+              final String dateKey = sortedKeys[index];
+              final List<dynamic> dateItems = grouped[dateKey]!;
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 4),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12.0,
+                      horizontal: 4,
+                    ),
                     child: Text(
                       dateKey,
                       style: TextStyle(
@@ -425,7 +577,7 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
                       ),
                     ),
                   ),
-                  ...dateItems.map((item) => itemBuilder(item)).toList(),
+                  ...dateItems.map((item) => itemBuilder(item)),
                 ],
               );
             },
