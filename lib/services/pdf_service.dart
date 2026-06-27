@@ -26,9 +26,14 @@ class PdfService {
           return pw.Container(
             alignment: pw.Alignment.centerRight,
             margin: const pw.EdgeInsets.only(top: 20),
-            child: pw.Text(
-              'Page ${context.pageNumber} of ${context.pagesCount}',
-              style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Text(
+                  'Page ${context.pageNumber} of ${context.pagesCount}',
+                  style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
+                ),
+              ],
             ),
           );
         },
@@ -184,9 +189,14 @@ class PdfService {
           return pw.Container(
             alignment: pw.Alignment.centerRight,
             margin: const pw.EdgeInsets.only(top: 20),
-            child: pw.Text(
-              'Page ${context.pageNumber} of ${context.pagesCount}',
-              style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Text(
+                  'Page ${context.pageNumber} of ${context.pagesCount}',
+                  style: pw.TextStyle(color: PdfColors.grey, fontSize: 10),
+                ),
+              ],
             ),
           );
         },
