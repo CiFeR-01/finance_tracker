@@ -49,12 +49,27 @@ We are continuously working to improve the Finance Tracker. Future updates will 
 - [ ] **Notifications**: Reminders for recurring bills and tax filing deadlines.
 - [ ] **Multi-currency Support**: For users who manage finances across different regions.
 
-## 🤝 Contributing
+### Setup
 
-Contributions are welcome! If you have suggestions or find bugs, feel free to open an issue or submit a pull request.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/CiFeR-01/finance_tracker.git
+   cd finance_tracker
+   ```
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. **Install Dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+3. **Firebase Configuration**:
+   - Create a new project in [Firebase Console](https://console.firebase.google.com/).
+   - Add Android/iOS apps.
+   - Download and place `google-services.json` in `android/app/`.
+   - Enable **Email/Password** authentication.
+   - Create a **Firestore Database**.
+
+4. **Run the App**:
+   ```bash
+   flutter run
+   ```
