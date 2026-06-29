@@ -36,18 +36,19 @@ class _ReportPageState extends State<ReportPage> {
     'Others'
   ];
 
+  //tell phone to create pdf for incomes and expenses for that month
   void _generateMonthlyReport(List<IncomeRecord> filteredIncomes, List<ExpenseRecord> filteredExpenses) async {
     try {
-      if (filteredIncomes.isEmpty && filteredExpenses.isEmpty) {
+      if (filteredIncomes.isEmpty && filteredExpenses.isEmpty) { //so it will try n check if there are no records for that month
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No Transaction Records available for the selected month.')),
         );
         return;
       }
 
-      // Show a "loading" snackbar
+      //show "loading" snackbar
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preparing PDF...'), duration: Duration(seconds: 1)),
+        const SnackBar(content: Text('Preparing PDF...'), duration: Duration(seconds: 1)), //it sets how long the preparing PDF word stay on screen
       );
 
       await PdfService.generateMonthlyReport(
@@ -62,12 +63,12 @@ class _ReportPageState extends State<ReportPage> {
     }
   }
 
-  void _generateCategoryReport(List<ExpenseRecord> filteredExpenses) async {
-    try {
+  void _generateCategoryReport(List<ExpenseRecord> filteredExpenses) async { //buil pdf takes time so async tells phone to run function in background so app screen won't freeze
+    try { //tells app to do an action
       if (filteredExpenses.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No expenses available for $_selectedCategory in the selected month.')),
-        );
+        ); //snackbar the small black notifi bar that slides up from bottom of emu screen to inform user
         return;
       }
 
@@ -75,12 +76,12 @@ class _ReportPageState extends State<ReportPage> {
         const SnackBar(content: Text('Preparing PDF...'), duration: Duration(seconds: 1)),
       );
 
-      await PdfService.generateCategoryReport(
+      await PdfService.generateCategoryReport( //await use to ask code to pause n wait for pdf to finish generating
         month: _selectedMonth,
         category: _selectedCategory,
         expenses: filteredExpenses,
       );
-    } catch (e) {
+    } catch (e) { //if something wrong, use this to catch error message to avoid app crash
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error generating report: $e')),
       );
@@ -89,51 +90,64 @@ class _ReportPageState extends State<ReportPage> {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<HomeViewModel>();
+    final viewModel = context.watch<HomeViewModel>(); //live watching database asset(when new expense or income input in add page, here will update instantly)
 
-    // Calculate data for the selected month
-    final filteredIncomes = viewModel.incomes.where((i) => i.incomeDate.month == _selectedMonth).toList();
+    //calculate data for the selected month
+    final filteredIncomes = viewModel.incomes.where((i) => i.incomeDate.month == _selectedMonth).toList(); //search engine loop that give only records for the month i choose
     final filteredExpenses = viewModel.expenses.where((e) => e.expenseDate.month == _selectedMonth).toList();
     
-    final totalIn = filteredIncomes.fold(0.0, (sum, i) => sum + i.netIncome);
+    final totalIn = filteredIncomes.fold(0.0, (sum, i) => sum + i.netIncome); //loop through filtered transaction n start calc at 0.0, then add each trans amount one by one to give total sum
     final totalEx = filteredExpenses.fold(0.0, (sum, e) => sum + e.amount);
-    final balance = totalIn - totalEx;
+    final balance = totalIn - totalEx; //math formula to calc savings
 
-    // Filtered expenses for category report
+    //filtered expenses for category report
     final categoryExpenses = _selectedCategory == 'All Categories' 
         ? filteredExpenses 
         : filteredExpenses.where((e) => e.category == _selectedCategory).toList();
+
+    //past month comparison data
+    int prevMonth = _selectedMonth == 1 ? 12 : _selectedMonth - 1;//logiv that applied to calc previous month n this month to do compare
+    int prevYear = _selectedMonth == 1 ? DateTime.now().year - 1 : DateTime.now().year;
+    
+    final prevIncomes = viewModel.incomes.where((i) => i.incomeDate.month == prevMonth && i.incomeDate.year == prevYear).toList();
+    final prevExpenses = viewModel.expenses.where((e) => e.expenseDate.month == prevMonth && e.expenseDate.year == prevYear).toList();
+    
+    final prevTotalIn = prevIncomes.fold(0.0, (sum, i) => sum + i.netIncome);
+    final prevTotalEx = prevExpenses.fold(0.0, (sum, e) => sum + e.amount);
+    final prevBalance = prevTotalIn - prevTotalEx;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Top Header
+          //top header
           Container(
             width: double.infinity,
-            height: 100,
+            padding: const EdgeInsets.only(top: 60, bottom: 20),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
             ),
-            child: const SafeArea(
-              child: Center(
-                child: Text(
-                  'Reports',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+            child: const Center(
+              child: Text(
+                'Reports', //main text on top bar
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
 
-          // Scrollable Content
+          //scrollable content
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
@@ -149,9 +163,9 @@ class _ReportPageState extends State<ReportPage> {
                     'Create detailed financial summaries in PDF format for your records and tax filing',
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 25), //invisible vertical spacers that create gap in between widgets
 
-                  // Select Month Section
+                  //select month section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -172,7 +186,7 @@ class _ReportPageState extends State<ReportPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<int>(
+                  DropdownButtonFormField<int>( //interactive clickable month selection
                     value: _selectedMonth,
                     isExpanded: true,
                     decoration: InputDecoration(
@@ -180,7 +194,7 @@ class _ReportPageState extends State<ReportPage> {
                       filled: true,
                       fillColor: Colors.grey[50],
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12), //make sharp edges curve(UI enhance)
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       enabledBorder: OutlineInputBorder(
@@ -189,6 +203,9 @@ class _ReportPageState extends State<ReportPage> {
                       ),
                     ),
                     items: List.generate(12, (index) => index + 1).map((int month) {
+                      //loop 12 times to create emptylist with 12 slots
+                      //add 1 to each slot from 0-11 to 1-12(1 is jan, 12 is dec)
+                      //map each raw numbers into readable text
                       return DropdownMenuItem<int>(
                         value: month,
                         child: Text(DateFormat('MMMM').format(DateTime(2024, month))),
@@ -196,7 +213,7 @@ class _ReportPageState extends State<ReportPage> {
                     }).toList(),
                     onChanged: (int? newValue) {
                       if (newValue != null) {
-                        setState(() {
+                        setState(() { //very important to refresh screen to update latest numbers
                           _selectedMonth = newValue;
                         });
                       }
@@ -214,12 +231,12 @@ class _ReportPageState extends State<ReportPage> {
                   ),
                   const SizedBox(height: 15),
 
-                  // Complete Monthly Report Card
+                  //complete monthly report card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF3E5F5), // Light purple
+                      color: const Color(0xFFF3E5F5), //light purple
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(color: const Color(0xFFE1BEE7), width: 1.5),
                     ),
@@ -248,6 +265,10 @@ class _ReportPageState extends State<ReportPage> {
                         Row(
                           children: [
                             Expanded(child: _buildMiniStat(Icons.south_west, '${filteredIncomes.length} Incomes')),
+                            //expand let box stretch horizontal to fill half of row cleanly without layout crash
+                            //group icon n text into tiny style package
+                            //draw diagonal arrow pointing down left
+                            //count items in list and print total number to screen
                             const SizedBox(width: 8),
                             Expanded(child: _buildMiniStat(Icons.north_east, '${filteredExpenses.length} Expenses')),
                           ],
@@ -256,10 +277,10 @@ class _ReportPageState extends State<ReportPage> {
                         SizedBox(
                           width: double.infinity,
                           height: 50,
-                          child: ElevatedButton(
+                          child: ElevatedButton( //clickable action button widget in card
                             onPressed: () => _generateMonthlyReport(filteredIncomes, filteredExpenses),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF9C27B0), // Purple button
+                              backgroundColor: const Color(0xFF9C27B0), //purple button
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 0,
                             ),
@@ -284,12 +305,12 @@ class _ReportPageState extends State<ReportPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Category-Specific Report Card
+                  //category specific report card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F7FA), // Light teal
+                      color: const Color(0xFFE0F7FA),
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(color: const Color(0xFFB2EBF2), width: 1.5),
                     ),
@@ -386,9 +407,21 @@ class _ReportPageState extends State<ReportPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 25),
+
+                  _buildComparisonSection( //hand over calc math value to list month-over-month comparison table
+                    currentIn: totalIn,
+                    currentEx: totalEx,
+                    currentSav: balance,
+                    prevIn: prevTotalIn,
+                    prevEx: prevTotalEx,
+                    prevSav: prevBalance,
+                    prevMonthName: DateFormat('MMMM').format(DateTime(prevYear, prevMonth)),
+                    currentMonthName: DateFormat('MMMM').format(DateTime(2024, _selectedMonth)),
+                  ),
                   
                   const SizedBox(height: 30),
-                  // Info Footer
+                  //info footer
                   Center(
                     child: Column(
                       children: [
@@ -409,6 +442,112 @@ class _ReportPageState extends State<ReportPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildComparisonSection({
+    required double currentIn,
+    required double currentEx,
+    required double currentSav,
+    required double prevIn,
+    required double prevEx,
+    required double prevSav,
+    required String prevMonthName,
+    required String currentMonthName,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Month-over-Month Comparison',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Comparing $currentMonthName with $prevMonthName',
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              _buildComparisonRow('Total Income', currentIn, prevIn, Colors.green, currentMonthName, prevMonthName),
+              const Divider(height: 30), //thin lines separating income, expense n savings
+              _buildComparisonRow('Total Expenses', currentEx, prevEx, Colors.red, currentMonthName, prevMonthName),
+              const Divider(height: 30),
+              _buildComparisonRow('Net Savings', currentSav, prevSav, Colors.blue, currentMonthName, prevMonthName),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComparisonRow(String title, double current, double prev, Color color, String currentMonth, String prevMonth) {
+    double diff = current - prev;
+    bool isIncrease = diff >= 0;
+    bool isExpenses = title.toLowerCase().contains('expenses');
+
+    Color trendColor = isExpenses //automated indicator color
+        ? (isIncrease ? Colors.red : Colors.green) 
+        : (isIncrease ? Colors.green : Colors.red);
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
+              const SizedBox(height: 4),
+              Text(
+                '$prevMonth: RM ${prev.toStringAsFixed(2)}', //force raw math decimals look like clean MYR currency
+                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$currentMonth: RM ${current.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isIncrease ? Icons.trending_up : Icons.trending_down, //arrow pointing up or down
+                    size: 14,
+                    color: trendColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'RM ${diff.abs().toStringAsFixed(2)} ${isIncrease ? 'more' : 'lesser'}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: trendColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
