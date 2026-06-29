@@ -18,6 +18,7 @@ class TaxViewModel extends ChangeNotifier {
 
   StreamSubscription? _incomeSub;
   StreamSubscription? _expenseSub;
+  StreamSubscription? _userSub;
 
   TaxViewModel(this._financeService, this._authService) {
     _init();
@@ -29,15 +30,15 @@ class TaxViewModel extends ChangeNotifier {
   void _init() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final data = await _authService.getUserData(user.uid);
-
-      if (data == null) {
-        // Document missing in Firestore, force logout
-        await _authService.logout();
-        return;
-      }
-
-      _userModel = data;
+      // Watch user profile changes
+      _userSub = _authService.watchUserData(user.uid).listen((data) {
+        if (data == null) {
+          _authService.logout();
+          return;
+        }
+        _userModel = data;
+        notifyListeners();
+      });
 
       _incomeSub = _financeService.watchAllIncomes().listen((data) {
         _incomes = data;
@@ -56,6 +57,7 @@ class TaxViewModel extends ChangeNotifier {
   void dispose() {
     _incomeSub?.cancel();
     _expenseSub?.cancel();
+    _userSub?.cancel();
     super.dispose();
   }
 

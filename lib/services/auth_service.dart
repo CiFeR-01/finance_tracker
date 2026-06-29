@@ -22,6 +22,16 @@ class AuthService {
     return null;
   }
 
+  // Watch user data changes
+  Stream<UserModel?> watchUserData(String uid) {
+    return _db.collection('users').doc(uid).snapshots().map((doc) {
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    });
+  }
+
   // Register
   Future<UserCredential?> register(String email, String password, String name, TaxProfile taxProfile) async {
     try {
