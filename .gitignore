@@ -15,10 +15,6 @@ migrate.log
 *.ipr
 *.iws
 .idea/
-
-# The .idea/ directory should generally be ignored, but some people like to share
-# run configurations. However, workspace.xml and tasks.xml MUST be ignored.
-# If you want to keep .idea in Git, ignore the whole dir or specific files.
 .idea/workspace.xml
 .idea/tasks.xml
 .idea/modules.xml
@@ -32,6 +28,7 @@ migrate.log
 .pub-cache/
 .pub/
 /build/
+/doc/api/
 
 # Android related
 **/android/**/generated/
@@ -45,6 +42,7 @@ android/project.properties
 android/ant.properties
 android/out/
 android/app/src/main/res/values/goog-res.xml
+.kotlin/
 
 # iOS related
 **/ios/**/*.mode1v3
@@ -62,19 +60,15 @@ android/app/src/main/res/values/goog-res.xml
 **/ios/**/xcuserdata/
 **/ios/**/Config/
 **/ios/**/GeneratedFiles/
-**/ios/**/Flutter/Flutter.framework
-**/ios/**/Flutter/Flutter.podspec
-**/ios/**/Flutter/Generated.xcconfig
-**/ios/**/Flutter/app.flx
-**/ios/**/Flutter/app.zip
-**/ios/**/Flutter/flutter_assets/
-**/ios/**/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
 **/ios/**/ServiceDefinitions.json
 **/ios/**/GoogleService-Info.plist
 
-# Firebase configuration files
-google-services.json
-GoogleService-Info.plist
+# Firebase configuration files (untrack these if they contain secrets)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
 
 # Local environment secrets
 .env
