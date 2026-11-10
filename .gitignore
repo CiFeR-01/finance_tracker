@@ -1,0 +1,74 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate.log
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/modules.xml
+.idea/libraries/
+
+# Flutter/Dart related
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/doc/api/
+
+# Android related
+**/android/**/generated/
+**/android/gen/
+**/android/bin/
+*.keystore
+*.jks
+android/.gradle/
+android/local.properties
+android/project.properties
+android/ant.properties
+android/out/
+android/app/src/main/res/values/goog-res.xml
+.kotlin/
+
+# iOS related
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.perspectivev3
+**/ios/**/*.pbxuser
+**/ios/**/*.pbxproj
+**/ios/**/Contents.json
+**/ios/**/Icon?
+**/ios/**/Icon\r
+**/ios/**/Pods/
+**/ios/**/.xcworkspace/
+**/ios/**/Frameworks/
+**/ios/**/DerivedData/
+**/ios/**/xcuserdata/
+**/ios/**/Config/
+**/ios/**/GeneratedFiles/
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/**/ServiceDefinitions.json
+**/ios/**/GoogleService-Info.plist
+
+# Firebase configuration files (untrack these if they contain secrets)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Local environment secrets
+.env
