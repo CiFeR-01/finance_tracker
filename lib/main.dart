@@ -5,13 +5,13 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'views/home_page.dart';
 import 'views/login_page.dart';
+import 'views/network_diagnostic_screen.dart';
 import 'services/finance_service.dart';
 import 'services/auth_service.dart';
 import 'viewmodels/home_view_model.dart';
 import 'viewmodels/tax_view_model.dart';
 import 'viewmodels/add_expense_view_model.dart';
 import 'viewmodels/add_income_view_model.dart';
-
 
 /// The entry point of the Finance Tracker application.
 /// 
@@ -42,11 +42,41 @@ void main() async {
 /// 
 /// It uses a [StreamBuilder] to listen to authentication state changes 
 /// and provides various ViewModels to the widget tree using [MultiProvider].
-class FinanceTrackerApp extends StatelessWidget {
+/// Supports network security diagnostic when launched with --dart-define=SHOW_NETWORK_DIAGNOSTIC=true.
+class FinanceTrackerApp extends StatefulWidget {
   const FinanceTrackerApp({super.key});
 
   @override
+  State<FinanceTrackerApp> createState() => _FinanceTrackerAppState();
+}
+
+class _FinanceTrackerAppState extends State<FinanceTrackerApp> {
+  bool _showDiagnostic = const bool.fromEnvironment(
+    'SHOW_NETWORK_DIAGNOSTIC',
+    defaultValue: false,
+  );
+
+  @override
   Widget build(BuildContext context) {
+    if (_showDiagnostic) {
+      return MaterialApp(
+        title: 'FinanceTracker - Diagnostic',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+        ),
+        home: NetworkDiagnosticScreen(
+          onProceed: () {
+            setState(() {
+              _showDiagnostic = false;
+            });
+          },
+        ),
+      );
+    }
+
     return StreamBuilder<User?>(
       stream: AuthService().userStream,
       builder: (context, snapshot) {

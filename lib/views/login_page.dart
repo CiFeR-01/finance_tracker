@@ -182,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) return 'Please enter your password';
-                                    if (value.length < 6) return 'Password must be at least 6 characters';
+                                    if (value.length < 8) return 'Password must be at least 8 characters';
                                     return null;
                                   },
                                 ),
@@ -214,9 +214,9 @@ class _LoginPageState extends State<LoginPage> {
                                     child: _isLoading
                                         ? const CircularProgressIndicator()
                                         : const Text(
-                                            'LOGIN',
-                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                          ),
+                                      'LOGIN',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                 ),
                               ],

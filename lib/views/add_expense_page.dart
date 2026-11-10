@@ -22,7 +22,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
   @override
   void initState() {
     super.initState();
-    _amountController.addListener(_onAmountChanged);
+    _amountController.addListener(() {
+      context.read<AddExpenseViewModel>().setAmount(_amountController.text);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AddExpenseViewModel>().clearData();
     });
@@ -30,14 +32,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
   @override
   void dispose() {
-    _amountController.removeListener(_onAmountChanged);
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
-  }
-
-  void _onAmountChanged() {
-    context.read<AddExpenseViewModel>().setAmount(_amountController.text);
   }
 
   Future<void> _pickImage(AddExpenseViewModel viewModel) async {
@@ -98,7 +95,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
             height: 100,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
+                colors: [Color(0xFFF44336), Color(0xFFD32F2F)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -136,8 +133,13 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildLabel('Amount'),
-                    _buildTextField(_amountController, '0.0', isNumber: true),
-                    
+                    _buildTextField(
+                      controller: _amountController,
+                      hint: '0.0',
+                      isNumber: true,
+                      validator: (val) => _validateAmount(val, 'Amount', allowZero: false),
+                    ),
+
                     _buildLabel('Category'),
                     DropdownButtonFormField<String>(
                       value: viewModel.selectedCategory,
@@ -153,12 +155,78 @@ class _AddExpensePageState extends State<AddExpensePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    _buildTaxDeductibleSection(viewModel),
+                    if (viewModel.isLimitExceeded)
+                      _buildLimitWarning('Note: You have already reached the RM ${viewModel.getLimitForCategory(viewModel.selectedCategory).toInt()} relief limit for ${viewModel.selectedCategory}; this entry won\'t further reduce your tax.'),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: viewModel.isCategoryDeductible ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: viewModel.isCategoryDeductible ? Colors.green.shade300 : Colors.red.shade300,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: viewModel.isTaxDeductible,
+                            fillColor: WidgetStateProperty.resolveWith((states) {
+                              if (!viewModel.isCategoryDeductible) return Colors.red.shade200;
+                              if (states.contains(WidgetState.selected)) return Colors.red;
+                              return Colors.white;
+                            }),
+                            onChanged: viewModel.isCategoryDeductible
+                                ? (value) => viewModel.setTaxDeductible(value ?? false)
+                                : null,
+                            activeColor: Colors.red,
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tax Deductible',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: viewModel.isCategoryDeductible ? Colors.black : Colors.red.shade900,
+                                  ),
+                                ),
+                                Text(
+                                  viewModel.isCategoryDeductible
+                                      ? 'This category qualifies for tax relief'
+                                      : 'Not eligible for Malaysian tax relief',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: viewModel.isCategoryDeductible ? Colors.green.shade700 : Colors.red.shade700,
+                                      fontWeight: FontWeight.bold
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Icon(
+                                viewModel.isCategoryDeductible ? Icons.check_circle : Icons.error_outline,
+                                color: viewModel.isCategoryDeductible ? Colors.green : Colors.red,
+                                size: 24
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 16),
 
                     _buildLabel('Descriptions'),
-                    _buildTextField(_descriptionController, 'Examples...'),
-                    
+                    _buildTextField(
+                      controller: _descriptionController,
+                      hint: 'Examples...',
+                      validator: (val) => (val != null && val.length > 100) ? 'Description too long (max 100 chars)' : null,
+                    ),
+
                     _buildLabel('Date'),
                     InkWell(
                       onTap: () => _selectDate(context, viewModel),
@@ -192,17 +260,17 @@ class _AddExpensePageState extends State<AddExpensePage> {
                         ),
                         child: viewModel.proofImagePath == null
                             ? const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey),
-                                  SizedBox(height: 8),
-                                  Text('Capture receipt/proof', style: TextStyle(color: Colors.grey)),
-                                ],
-                              )
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey),
+                            SizedBox(height: 8),
+                            Text('Capture receipt/proof', style: TextStyle(color: Colors.grey)),
+                          ],
+                        )
                             : ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
-                              ),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -212,7 +280,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                       child: ElevatedButton(
                         onPressed: () => _saveExpense(viewModel),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
+                          backgroundColor: Colors.red,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         ),
                         child: const Text('Save Expense', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
@@ -229,74 +297,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
     );
   }
 
-  Widget _buildTaxDeductibleSection(AddExpenseViewModel viewModel) {
-    bool isEligible = viewModel.isCategoryDeductible;
-    bool isLimitExceeded = viewModel.isLimitExceeded;
-    
-    Color bgColor = !isEligible ? Colors.red.withOpacity(0.05) : (isLimitExceeded ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1));
-    Color borderColor = !isEligible ? Colors.red.shade200 : (isLimitExceeded ? Colors.orange.shade300 : Colors.green.shade300);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Checkbox(
-            value: viewModel.isTaxDeductible,
-            fillColor: WidgetStateProperty.resolveWith((states) {
-              if (!isEligible || isLimitExceeded) return Colors.grey.shade300;
-              if (states.contains(WidgetState.selected)) return Colors.purple;
-              return Colors.white;
-            }),
-            onChanged: (isEligible && !isLimitExceeded)
-              ? (value) => viewModel.setTaxDeductible(value ?? false)
-              : null,
-            activeColor: Colors.purple,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tax Deductible', 
-                  style: TextStyle(
-                    fontSize: 16, 
-                    fontWeight: FontWeight.bold,
-                    color: (isEligible && !isLimitExceeded) ? Colors.black : (isLimitExceeded ? Colors.orange.shade900 : Colors.red.shade900),
-                  ),
-                ),
-                Text(
-                  !isEligible 
-                    ? 'Not eligible for Malaysian tax relief'
-                    : (isLimitExceeded 
-                        ? 'Amount exceeds RM ${viewModel.getRemainingLimit(viewModel.selectedCategory).toStringAsFixed(0)} limit' 
-                        : 'This category qualifies for tax relief'),
-                  style: TextStyle(
-                    fontSize: 11, 
-                    color: !isEligible ? Colors.red.shade700 : (isLimitExceeded ? Colors.orange.shade800 : Colors.green.shade700), 
-                    fontWeight: FontWeight.bold
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Icon(
-              !isEligible ? Icons.error_outline : (isLimitExceeded ? Icons.warning_amber_rounded : Icons.check_circle), 
-              color: !isEligible ? Colors.red : (isLimitExceeded ? Colors.orange : Colors.green), 
-              size: 24
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -304,18 +304,38 @@ class _AddExpensePageState extends State<AddExpensePage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, {bool isNumber = false}) {
+  Widget _buildLimitWarning(String message) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Text(
+        message,
+        style: const TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  String? _validateAmount(String? value, String fieldName, {bool allowZero = true}) {
+    if (value == null || value.isEmpty) return 'Required';
+    final n = double.tryParse(value);
+    if (n == null) return 'Invalid number';
+    if (n < 0) return '$fieldName cannot be negative';
+    if (!allowZero && n == 0) return '$fieldName must be greater than zero';
+    return null;
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    bool isNumber = false,
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: controller,
         keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
         decoration: _inputDecoration(hint),
-        validator: (value) {
-          if (value == null || value.isEmpty) return 'Required';
-          if (isNumber && double.tryParse(value) == null) return 'Invalid number';
-          return null;
-        },
+        validator: validator ?? (value) => (value == null || value.isEmpty) ? 'Required' : null,
       ),
     );
   }
