@@ -11,15 +11,12 @@ import 'viewmodels/home_view_model.dart';
 import 'viewmodels/tax_view_model.dart';
 import 'viewmodels/add_expense_view_model.dart';
 import 'viewmodels/add_income_view_model.dart';
+import 'network_diagnostic.dart';
 
+/// Compile-time Flutter environment flag to enable/disable network diagnostic on launch.
+const bool kShowNetworkDiagnostic = bool.fromEnvironment('SHOW_NETWORK_DIAGNOSTIC', defaultValue: false);
 
-/// The entry point of the Finance Tracker application.
-/// 
-/// This file initializes Firebase, sets up the global services, 
-/// and configures the main application widget tree with [MultiProvider] 
-/// for state management.
-
-// Global finance service instance that provides access to the backend data.
+/// Global finance service instance that provides access to the backend data.
 late FinanceService financeService;
 
 /// The main function initializes the Flutter framework, Firebase, 
@@ -39,14 +36,38 @@ void main() async {
 }
 
 /// The root widget of the Finance Tracker application.
-/// 
-/// It uses a [StreamBuilder] to listen to authentication state changes 
-/// and provides various ViewModels to the widget tree using [MultiProvider].
-class FinanceTrackerApp extends StatelessWidget {
+class FinanceTrackerApp extends StatefulWidget {
   const FinanceTrackerApp({super.key});
 
   @override
+  State<FinanceTrackerApp> createState() => _FinanceTrackerAppState();
+}
+
+class _FinanceTrackerAppState extends State<FinanceTrackerApp> {
+  // Flag initialized from compile-time environment flag (default: false).
+  bool _showDiagnostic = kShowNetworkDiagnostic;
+
+  @override
   Widget build(BuildContext context) {
+    if (_showDiagnostic) {
+      return MaterialApp(
+        title: 'Network Diagnostic',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple, brightness: Brightness.dark),
+          useMaterial3: true,
+          fontFamily: 'Roboto',
+        ),
+        home: NetworkDiagnosticScreen(
+          onContinue: () {
+            setState(() {
+              _showDiagnostic = false;
+            });
+          },
+        ),
+      );
+    }
+
     return StreamBuilder<User?>(
       stream: AuthService().userStream,
       builder: (context, snapshot) {
@@ -77,9 +98,6 @@ class FinanceTrackerApp extends StatelessWidget {
   }
 
   /// Determines which screen to show based on the authentication [snapshot].
-  /// 
-  /// Displays a loading indicator while waiting, the [HomePage] if logged in, 
-  /// or the [LoginPage] if not authenticated.
   Widget _buildHome(AsyncSnapshot<User?> snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
