@@ -16,7 +16,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  
+
   final _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -39,7 +39,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       case 'operation-not-allowed':
         return 'Email/password accounts are not enabled.';
       case 'weak-password':
-        return 'The password is too weak.';
+        return 'Password is too weak. Must meet complexity requirements.';
       default:
         return 'Registration failed. Please try again.';
     }
@@ -65,7 +65,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           _nameController.text.trim(),
           taxProfile,
         );
-        
+
         if (mounted) Navigator.pop(context);
       } on FirebaseAuthException catch (e) {
         if (mounted) {
@@ -134,7 +134,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   const SizedBox(height: 30),
-                  
+
                   // Glassmorphic Form Container
                   ClipRRect(
                     borderRadius: BorderRadius.circular(30),
@@ -186,9 +186,16 @@ class _RegistrationPageState extends State<RegistrationPage> {
                                   ),
                                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                                 ),
-                                validator: (val) => val!.length < 6 ? 'Password too short (min 6 chars)' : null,
+                                validator: (val) {
+                                  if (val == null || val.isEmpty) return 'Enter a password';
+                                  if (val.length < 8) return 'Minimum 8 characters required';
+                                  if (!val.contains(RegExp(r'[A-Z]'))) return 'Must contain an uppercase letter';
+                                  if (!val.contains(RegExp(r'[a-z]'))) return 'Must contain a lowercase letter';
+                                  if (!val.contains(RegExp(r'[0-9]'))) return 'Must contain a number';
+                                  return null;
+                                },
                               ),
-                              
+
                               const SizedBox(height: 30),
                               _buildSectionTitle('MALAYSIAN TAX PROFILE'),
                               const Text(
@@ -196,17 +203,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
                                 style: TextStyle(color: Colors.white60, fontSize: 12),
                               ),
                               const SizedBox(height: 16),
-                              
+
                               _buildSwitchTile('Individual & Dependent', _isIndividual, (val) => setState(() => _isIndividual = val)),
                               _buildSwitchTile('Disabled Individual', _isDisabledIndividual, (val) => setState(() => _isDisabledIndividual = val)),
                               _buildSwitchTile('Husband / Wife / Alimony', _isHusbandWifeAlimony, (val) => setState(() => _isHusbandWifeAlimony = val)),
                               _buildSwitchTile('Disabled Husband / Wife', _isDisabledHusbandWife, (val) => setState(() => _isDisabledHusbandWife = val)),
-                              
+
                               _buildCounterTile('Child Relief Count', _childReliefCount, (val) => setState(() => _childReliefCount = val)),
                               _buildCounterTile('Disabled Child Count', _disabledChildCount, (val) => setState(() => _disabledChildCount = val)),
-                              
+
                               _buildSwitchTile('Parents Medical Expenses', _isParentsGrandparentsMedical, (val) => setState(() => _isParentsGrandparentsMedical = val)),
-                              
+
                               const SizedBox(height: 30),
                               SizedBox(
                                 width: double.infinity,
@@ -219,9 +226,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                                     elevation: 0,
                                   ),
-                                  child: _isLoading 
-                                    ? const CircularProgressIndicator()
-                                    : const Text('REGISTER', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  child: _isLoading
+                                      ? const CircularProgressIndicator()
+                                      : const Text('REGISTER', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 ),
                               ),
                             ],

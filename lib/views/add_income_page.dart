@@ -29,14 +29,15 @@ class _AddIncomePageState extends State<AddIncomePage> {
       context.read<AddIncomeViewModel>().clearData();
     });
 
+    // Real-time limit checking
     _epfController.addListener(_onInputChanged);
     _socsoController.addListener(_onInputChanged);
   }
 
   void _onInputChanged() {
     context.read<AddIncomeViewModel>().updateInputs(
-      _epfController.text,
-      _socsoController.text,
+      epfStr: _epfController.text,
+      socsoStr: _socsoController.text,
     );
   }
 
@@ -76,6 +77,22 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
   void _saveIncome(AddIncomeViewModel viewModel) async {
     if (_formKey.currentState!.validate()) {
+      final total = double.tryParse(_totalIncomeController.text) ?? 0;
+      final epf = double.tryParse(_epfController.text) ?? 0;
+      final socso = double.tryParse(_socsoController.text) ?? 0;
+      final pcb = double.tryParse(_pcbController.text) ?? 0;
+
+      // Logical Validation: Sum of deductions cannot exceed total income
+      if ((epf + socso + pcb) > total) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Sum of EPF, SOCSO, and PCB cannot exceed Total Income.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final success = await viewModel.saveIncome(
         totalIncomeStr: _totalIncomeController.text,
         epfStr: _epfController.text,
@@ -149,21 +166,37 @@ class _AddIncomePageState extends State<AddIncomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildLabel('Total Income'),
-                    _buildTextField(_totalIncomeController, '0.0', isNumber: true),
-
+                    _buildTextField(
+                      controller: _totalIncomeController,
+                      hint: '0.0',
+                      isNumber: true,
+                      validator: (val) => _validateAmount(val, 'Total Income', allowZero: false),
+                    ),
                     _buildLabel('EPF'),
-                    _buildTextField(_epfController, 'RM1000', isNumber: true),
+                    _buildTextField(
+                      controller: _epfController,
+                      hint: 'RM1000',
+                      isNumber: true,
+                      validator: (val) => _validateAmount(val, 'EPF'),
+                    ),
                     if (viewModel.isEpfLimitReached)
                       _buildLimitWarning('Note: You have already reached the RM ${AddIncomeViewModel.EPF_LIMIT.toInt()} EPF relief limit; this entry won\'t further reduce your tax.'),
-
                     _buildLabel('Socso'),
-                    _buildTextField(_socsoController, 'RM30', isNumber: true),
+                    _buildTextField(
+                      controller: _socsoController,
+                      hint: 'RM30',
+                      isNumber: true,
+                      validator: (val) => _validateAmount(val, 'Socso'),
+                    ),
                     if (viewModel.isSocsoLimitReached)
                       _buildLimitWarning('Note: You have already reached the RM ${AddIncomeViewModel.SOCSO_LIMIT.toInt()} SOCSO relief limit; this entry won\'t further reduce your tax.'),
-
                     _buildLabel('PCB'),
-                    _buildTextField(_pcbController, 'RM1000', isNumber: true),
-
+                    _buildTextField(
+                      controller: _pcbController,
+                      hint: 'RM1000',
+                      isNumber: true,
+                      validator: (val) => _validateAmount(val, 'PCB'),
+                    ),
                     _buildLabel('Category'),
                     DropdownButtonFormField<String>(
                       value: viewModel.selectedCategory,
@@ -179,7 +212,11 @@ class _AddIncomePageState extends State<AddIncomePage> {
                     ),
                     const SizedBox(height: 16),
                     _buildLabel('Descriptions'),
-                    _buildTextField(_descriptionController, 'Examples...'),
+                    _buildTextField(
+                      controller: _descriptionController,
+                      hint: 'Examples...',
+                      validator: (val) => (val != null && val.length > 100) ? 'Description too long (max 100 chars)' : null,
+                    ),
                     _buildLabel('Date'),
                     InkWell(
                       onTap: () => _selectDate(context, viewModel),
@@ -212,17 +249,17 @@ class _AddIncomePageState extends State<AddIncomePage> {
                         ),
                         child: viewModel.proofImagePath == null
                             ? const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey),
-                                  SizedBox(height: 8),
-                                  Text('Capture payslip/proof', style: TextStyle(color: Colors.grey)),
-                                ],
-                              )
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey),
+                            SizedBox(height: 8),
+                            Text('Capture payslip/proof', style: TextStyle(color: Colors.grey)),
+                          ],
+                        )
                             : ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
-                              ),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -266,18 +303,28 @@ class _AddIncomePageState extends State<AddIncomePage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, {bool isNumber = false}) {
+  String? _validateAmount(String? value, String fieldName, {bool allowZero = true}) {
+    if (value == null || value.isEmpty) return 'Required';
+    final n = double.tryParse(value);
+    if (n == null) return 'Invalid number';
+    if (n < 0) return '$fieldName cannot be negative';
+    if (!allowZero && n == 0) return '$fieldName must be greater than zero';
+    return null;
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    bool isNumber = false,
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: controller,
         keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
         decoration: _inputDecoration(hint),
-        validator: (value) {
-          if (value == null || value.isEmpty) return 'Required';
-          if (isNumber && double.tryParse(value) == null) return 'Invalid number';
-          return null;
-        },
+        validator: validator ?? (value) => (value == null || value.isEmpty) ? 'Required' : null,
       ),
     );
   }

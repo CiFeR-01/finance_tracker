@@ -29,6 +29,9 @@ class AddIncomeViewModel extends ChangeNotifier {
     super.dispose();
   }
 
+  static const double SOCSO_LIMIT = 350.0;
+  static const double EPF_LIMIT = 4000.0;
+
   final List<String> categories = [
     'Salary',
     'Bonus',
@@ -37,9 +40,6 @@ class AddIncomeViewModel extends ChangeNotifier {
     'Allowance',
     'Others'
   ];
-
-  static const double SOCSO_LIMIT = 350.0;
-  static const double EPF_LIMIT = 4000.0;
 
   String _selectedCategory = 'Salary';
   DateTime _selectedDate = DateTime.now();
@@ -58,18 +58,6 @@ class AddIncomeViewModel extends ChangeNotifier {
   bool get isSocsoLimitReached => _isSocsoLimitReached;
   bool get isEpfLimitReached => _isEpfLimitReached;
 
-  double get currentYearSocsoTotal {
-    return _incomes
-        .where((i) => i.incomeDate.year == _selectedDate.year)
-        .fold(0.0, (sum, item) => sum + item.socsoAmount);
-  }
-
-  double get currentYearEpfTotal {
-    return _incomes
-        .where((i) => i.incomeDate.year == _selectedDate.year)
-        .fold(0.0, (sum, item) => sum + item.epfAmount);
-  }
-
   // Setters/Actions
   void setCategory(String category) {
     _selectedCategory = category;
@@ -87,9 +75,10 @@ class AddIncomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateInputs(String epfStr, String socsoStr) {
-    _currentEpfInput = double.tryParse(epfStr) ?? 0.0;
-    _currentSocsoInput = double.tryParse(socsoStr) ?? 0.0;
+  // Use optional named parameters to prevent errors if called with partial data
+  void updateInputs({String? epfStr, String? socsoStr}) {
+    if (epfStr != null) _currentEpfInput = double.tryParse(epfStr) ?? 0.0;
+    if (socsoStr != null) _currentSocsoInput = double.tryParse(socsoStr) ?? 0.0;
     _checkLimits();
   }
 
@@ -98,7 +87,7 @@ class AddIncomeViewModel extends ChangeNotifier {
     final totalSocsoInDB = _incomes
         .where((i) => i.incomeDate.year == year)
         .fold(0.0, (sum, item) => sum + item.socsoAmount);
-    
+
     final totalEpfInDB = _incomes
         .where((i) => i.incomeDate.year == year)
         .fold(0.0, (sum, item) => sum + item.epfAmount);

@@ -14,13 +14,10 @@ class AddExpenseViewModel extends ChangeNotifier {
   }
 
   void _init() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      _expenseSub = _financeService.watchAllExpenses().listen((data) {
-        _expenses = data;
-        _checkTaxDeductibilityLimit();
-      });
-    }
+    _expenseSub = _financeService.watchAllExpenses().listen((data) {
+      _expenses = data;
+      _checkTaxDeductibilityLimit();
+    });
   }
 
   @override
@@ -47,23 +44,6 @@ class AddExpenseViewModel extends ChangeNotifier {
     'Others'
   ];
 
-  final List<String> _deductibleCategories = [
-    'Medical expenses',
-    'Health screening',
-    'Lifestyle',
-    'Sports lifestyle',
-    'Education fees',
-    'Childcare fees',
-    'SSPN net deposit',
-    'Breastfeeding equipment',
-    'EV charging / composting machine',
-    'Housing loan interest',
-    'Private Retirement Scheme',
-    'Insurance',
-    'Zakat',
-    'Donation/Gift'
-  ];
-
   final Map<String, double> _categoryLimits = {
     'Medical expenses': 10000.0,
     'Health screening': 1000.0,
@@ -83,7 +63,7 @@ class AddExpenseViewModel extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   String? _proofImagePath;
   bool _isTaxDeductible = true;
-  double _currentAmount = 0.0;
+  double _currentAmountInput = 0.0;
   bool _isLimitExceeded = false;
 
   // Getters
@@ -91,65 +71,33 @@ class AddExpenseViewModel extends ChangeNotifier {
   DateTime get selectedDate => _selectedDate;
   String? get proofImagePath => _proofImagePath;
   bool get isTaxDeductible => _isTaxDeductible;
-  bool get isCategoryDeductible => _deductibleCategories.contains(_selectedCategory);
   bool get isLimitExceeded => _isLimitExceeded;
+  bool get isCategoryDeductible => _categoryLimits.containsKey(_selectedCategory) || _selectedCategory == 'Zakat' || _selectedCategory == 'Donation/Gift';
 
-  double getRemainingLimit(String category) {
-    final limit = _categoryLimits[category];
-    if (limit == null) return double.infinity;
-
-    final alreadyClaimed = _expenses
-        .where((e) => e.isTaxDeductible && e.category == category)
-        .fold(0.0, (sum, item) => sum + item.amount);
-    
-    return limit - alreadyClaimed;
-  }
+  double getLimitForCategory(String category) => _categoryLimits[category] ?? 0.0;
 
   // Setters/Actions
   void setCategory(String category) {
     _selectedCategory = category;
+    _isTaxDeductible = isCategoryDeductible;
     _checkTaxDeductibilityLimit();
     notifyListeners();
   }
 
   void setAmount(String amountStr) {
-    _currentAmount = double.tryParse(amountStr) ?? 0.0;
+    _currentAmountInput = double.tryParse(amountStr) ?? 0.0;
     _checkTaxDeductibilityLimit();
     notifyListeners();
   }
 
-  void _checkTaxDeductibilityLimit() {
-    if (!isCategoryDeductible) {
-      _isLimitExceeded = false;
-      _isTaxDeductible = false;
-      return;
-    }
-
-    final remaining = getRemainingLimit(_selectedCategory);
-    
-    if (_currentAmount > remaining) {
-      _isLimitExceeded = true;
-      _isTaxDeductible = false;
-    } else {
-      _isLimitExceeded = false;
-      // We don't automatically set it back to true if it was RM 0 before, 
-      // but usually when user selects category it starts as deductible if applicable.
-      if (_currentAmount == 0 || (_isTaxDeductible == false && _isLimitExceeded == false)) {
-         // Optionally reset to true if we just came back from an exceeded state
-         // But let's keep it simple: if it's within limit, we default it to true when changing categories
-      }
-    }
-  }
-
   void setTaxDeductible(bool value) {
-    if (isCategoryDeductible && !_isLimitExceeded) {
-      _isTaxDeductible = value;
-      notifyListeners();
-    }
+    _isTaxDeductible = value;
+    notifyListeners();
   }
 
   void setDate(DateTime date) {
     _selectedDate = date;
+    _checkTaxDeductibilityLimit();
     notifyListeners();
   }
 
@@ -158,12 +106,26 @@ class AddExpenseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _checkTaxDeductibilityLimit() {
+    if (!_categoryLimits.containsKey(_selectedCategory)) {
+      _isLimitExceeded = false;
+      return;
+    }
+
+    final limit = _categoryLimits[_selectedCategory]!;
+    final alreadyClaimed = _expenses
+        .where((e) => e.isTaxDeductible && e.category == _selectedCategory && e.expenseDate.year == _selectedDate.year)
+        .fold(0.0, (sum, item) => sum + item.amount);
+
+    _isLimitExceeded = (alreadyClaimed + _currentAmountInput) >= limit;
+  }
+
   void clearData() {
     _selectedCategory = 'Medical expenses';
     _selectedDate = DateTime.now();
     _proofImagePath = null;
     _isTaxDeductible = true;
-    _currentAmount = 0.0;
+    _currentAmountInput = 0.0;
     _isLimitExceeded = false;
     notifyListeners();
   }
@@ -172,8 +134,7 @@ class AddExpenseViewModel extends ChangeNotifier {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
 
-    final amount = double.tryParse(amountStr);
-    if (amount == null) return false;
+    final amount = double.tryParse(amountStr) ?? 0.0;
 
     final entry = ExpenseRecord(
       id: '',
