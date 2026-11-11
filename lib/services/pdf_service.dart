@@ -8,11 +8,12 @@ import '../models/expense_record.dart';
 class PdfService {
   static Future<void> generateMonthlyReport({
     required int month,
+    int? year,
     required List<IncomeRecord> incomes,
     required List<ExpenseRecord> expenses,
   }) async {
     final pdf = pw.Document();
-    final monthName = DateFormat('MMMM, yyyy').format(DateTime(DateTime.now().year, month));
+    final monthName = DateFormat('MMMM, yyyy').format(DateTime(year ?? DateTime.now().year, month));
 
     final totalIncome = incomes.fold(0.0, (sum, item) => sum + item.netIncome);
     final totalExpenses = expenses.fold(0.0, (sum, item) => sum + item.amount);
@@ -178,11 +179,12 @@ class PdfService {
 
   static Future<void> generateCategoryReport({
     required int month,
+    int? year,
     required String category,
     required List<ExpenseRecord> expenses,
   }) async {
     final pdf = pw.Document();
-    final monthName = DateFormat('MMMM, yyyy').format(DateTime(DateTime.now().year, month));
+    final monthName = DateFormat('MMMM, yyyy').format(DateTime(year ?? DateTime.now().year, month));
     final totalAmount = expenses.fold(0.0, (sum, item) => sum + item.amount);
 
     pdf.addPage(

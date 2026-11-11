@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/page_header.dart';
+import '../theme/app_theme.dart';
+import '../widgets/reminders_card.dart';
+import '../theme/theme_controller.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -56,6 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
         taxProfile: _userModel!.taxProfile,
       );
       await _authService.updateProfile(updatedUser);
+      if (!mounted) return;
       setState(() {
         _userModel = updatedUser;
         _isEditing = false;
@@ -63,20 +69,17 @@ class _ProfilePageState extends State<ProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile updated successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Update failed: $e'),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -94,214 +97,179 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          // 1. Header with Gradient and Profile Info
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          PageHeader(
+            title: 'Profile',
+            actions: [
+              IconButton(
+                tooltip: _isEditing ? 'Save' : 'Edit',
+                icon: Icon(_isEditing ? Icons.check_rounded : Icons.edit_outlined),
+                style: _isEditing ? IconButton.styleFrom(backgroundColor: colors.primary, foregroundColor: colors.onPrimary) : null,
+                onPressed: () {
+                  if (_isEditing) {
+                    _updateProfile();
+                  } else {
+                    setState(() => _isEditing = true);
+                  }
+                },
               ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
+              IconButton(
+                tooltip: 'Log out',
+                icon: const Icon(Icons.logout_rounded),
+                onPressed: () => _authService.logout(),
               ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'My Profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                _isEditing ? Icons.check_circle : Icons.edit_note,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                              onPressed: () {
-                                if (_isEditing) {
-                                  _updateProfile();
-                                } else {
-                                  setState(() => _isEditing = true);
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.logout, color: Colors.white, size: 24),
-                              onPressed: () => _authService.logout(),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
-                        ),
-                        child: CircleAvatar(
-                          radius: 45,
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
-                          child: Text(
-                            _userModel!.name.isNotEmpty ? _userModel!.name[0].toUpperCase() : '?',
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _userModel!.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      _userModel!.email,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                ),
-              ),
-            ),
+            ],
           ),
-
-          // 2. Scrollable Content
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader('Personal Information'),
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space2, AppTheme.space4, AppTheme.space5),
+              children: [
+                // Identity
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 32,
+                      backgroundColor: colors.primaryContainer,
+                      child: Text(
+                        _userModel!.name.isNotEmpty ? _userModel!.name[0].toUpperCase() : '?',
+                        style: context.text.headlineSmall?.copyWith(color: colors.onPrimaryContainer),
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.space4),
+                    Expanded(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildInfoField(
-                            icon: Icons.person_outline,
-                            label: 'Full Name',
-                            controller: _nameController,
-                            isEditable: _isEditing,
-                          ),
-                          const Divider(height: 24),
-                          _buildInfoField(
-                            icon: Icons.email_outlined,
-                            label: 'Email Address',
-                            controller: TextEditingController(text: _userModel!.email),
-                            isEditable: false,
-                          ),
+                          Text(_userModel!.name, style: context.text.titleLarge, overflow: TextOverflow.ellipsis),
+                          Text(_userModel!.email,
+                              style: context.text.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+                              overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  _buildSectionHeader('Malaysian Tax Relief Profile'),
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.space5),
+                _buildSectionHeader('Personal information'),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppTheme.space4),
                     child: Column(
                       children: [
-                        _buildTaxSwitch(
-                          'Individual & Dependent',
-                          _userModel!.taxProfile.isIndividualDependentRelatives,
-                          (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isIndividual: val)),
+                        _buildInfoField(
+                          icon: Icons.person_outline_rounded,
+                          label: 'Full name',
+                          controller: _nameController,
+                          isEditable: _isEditing,
                         ),
-                        _buildTaxSwitch(
-                          'Disabled Individual',
-                          _userModel!.taxProfile.isDisabledIndividual,
-                          (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isDisabled: val)),
-                        ),
-                        _buildTaxSwitch(
-                          'Husband/Wife/Alimony',
-                          _userModel!.taxProfile.isHusbandWifeAlimony,
-                          (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isSpouse: val)),
-                        ),
-                        _buildTaxSwitch(
-                          'Disabled Husband/Wife',
-                          _userModel!.taxProfile.isDisabledHusbandWife,
-                          (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isDisabledSpouse: val)),
-                        ),
-                        const Divider(height: 1, indent: 16, endIndent: 16),
-                        _buildCounter(
-                          'Child Relief Count',
-                          _userModel!.taxProfile.childReliefCount,
-                          (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(childCount: val)),
-                        ),
-                        _buildCounter(
-                          'Disabled Child Count',
-                          _userModel!.taxProfile.disabledChildCount,
-                          (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(disabledChildCount: val)),
-                        ),
-                        const Divider(height: 1, indent: 16, endIndent: 16),
-                        _buildTaxSwitch(
-                          'Parents/Grandparents Medical',
-                          _userModel!.taxProfile.isParentsGrandparentsMedical,
-                          (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isParentsMedical: val)),
+                        const Padding(padding: EdgeInsets.symmetric(vertical: AppTheme.space3), child: Divider()),
+                        _buildInfoField(
+                          icon: Icons.email_outlined,
+                          label: 'Email address',
+                          controller: TextEditingController(text: _userModel!.email),
+                          isEditable: false,
                         ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 24),
-                  _buildSectionHeader('Security & Settings'),
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFF3E5F5),
-                        child: Icon(Icons.lock_reset, color: Colors.purple),
-                      ),
-                      title: const Text(
-                        'Reset Password',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      subtitle: const Text('Send reset link to your email'),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                      onTap: () => _sendResetEmail(),
-                    ),
+                ),
+                const SizedBox(height: AppTheme.space5),
+                _buildSectionHeader('Malaysian tax relief profile'),
+                if (!_isEditing)
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppTheme.space1, bottom: AppTheme.space2),
+                    child: Text('Tap the edit button to change these.',
+                        style: context.text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
                   ),
-                  const SizedBox(height: 30),
-                ],
-              ),
+                Card(
+                  child: Column(
+                    children: [
+                      _buildTaxSwitch(
+                        'Individual & dependent relatives',
+                        _userModel!.taxProfile.isIndividualDependentRelatives,
+                        (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isIndividual: val)),
+                      ),
+                      _buildTaxSwitch(
+                        'Disabled individual',
+                        _userModel!.taxProfile.isDisabledIndividual,
+                        (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isDisabled: val)),
+                      ),
+                      _buildTaxSwitch(
+                        'Husband / wife / alimony',
+                        _userModel!.taxProfile.isHusbandWifeAlimony,
+                        (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isSpouse: val)),
+                      ),
+                      _buildTaxSwitch(
+                        'Disabled husband / wife',
+                        _userModel!.taxProfile.isDisabledHusbandWife,
+                        (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isDisabledSpouse: val)),
+                      ),
+                      const Divider(indent: AppTheme.space4, endIndent: AppTheme.space4),
+                      _buildCounter(
+                        'Children',
+                        _userModel!.taxProfile.childReliefCount,
+                        (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(childCount: val)),
+                      ),
+                      _buildCounter(
+                        'Disabled children',
+                        _userModel!.taxProfile.disabledChildCount,
+                        (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(disabledChildCount: val)),
+                      ),
+                      const Divider(indent: AppTheme.space4, endIndent: AppTheme.space4),
+                      _buildTaxSwitch(
+                        'Parents / grandparents medical',
+                        _userModel!.taxProfile.isParentsGrandparentsMedical,
+                        (val) => setState(() => _userModel = _userModel!.copyWithTaxProfile(isParentsMedical: val)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppTheme.space5),
+                _buildSectionHeader('Appearance'),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppTheme.space4),
+                    child: Builder(builder: (context) {
+                      final theme = context.watch<ThemeController>();
+                      return SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<ThemeMode>(
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text('Light')),
+                            ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text('Dark')),
+                            ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto_outlined), label: Text('Auto')),
+                          ],
+                          selected: {theme.mode},
+                          onSelectionChanged: (v) => theme.setMode(v.first),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(height: AppTheme.space5),
+                _buildSectionHeader('Reminders'),
+                const RemindersCard(),
+                const SizedBox(height: AppTheme.space5),
+                _buildSectionHeader('Security'),
+                Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: AppTheme.space4, vertical: AppTheme.space1),
+                    leading: CircleAvatar(
+                      backgroundColor: colors.secondaryContainer,
+                      child: Icon(Icons.lock_reset_rounded, color: colors.onSecondaryContainer),
+                    ),
+                    title: const Text('Reset password'),
+                    subtitle: const Text('Send a reset link to your email'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _sendResetEmail(),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -316,8 +284,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Password reset link sent to your email!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -326,8 +292,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -336,16 +300,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey.shade600,
-          letterSpacing: 1.1,
-        ),
-      ),
+      padding: const EdgeInsets.only(left: AppTheme.space1, bottom: AppTheme.space2),
+      child: Text(title, style: context.text.titleSmall?.copyWith(color: context.colors.primary)),
     );
   }
 
@@ -355,35 +311,30 @@ class _ProfilePageState extends State<ProfilePage> {
     required TextEditingController controller,
     required bool isEditable,
   }) {
+    final colors = context.colors;
     return Row(
       children: [
-        Icon(icon, color: Colors.purple.shade300, size: 22),
-        const SizedBox(width: 16),
+        Icon(icon, color: colors.onSurfaceVariant, size: 22),
+        const SizedBox(width: AppTheme.space4),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-              ),
+              Text(label, style: context.text.labelMedium?.copyWith(color: colors.onSurfaceVariant)),
               TextField(
                 controller: controller,
                 enabled: isEditable,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
+                style: context.text.bodyLarge,
                 decoration: InputDecoration(
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                  filled: false,
+                  contentPadding: const EdgeInsets.symmetric(vertical: AppTheme.space1),
                   border: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                   enabledBorder: isEditable
-                      ? const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.purple, width: 0.5),
-                        )
+                      ? UnderlineInputBorder(borderSide: BorderSide(color: colors.primary))
                       : InputBorder.none,
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: colors.primary, width: 2)),
                 ),
               ),
             ],
@@ -395,61 +346,32 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildTaxSwitch(String title, bool value, Function(bool) onChanged) {
     return SwitchListTile(
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-      ),
+      title: Text(title, style: context.text.bodyLarge),
       value: value,
-      activeThumbColor: Colors.purple,
       onChanged: _isEditing ? onChanged : null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppTheme.space4),
     );
   }
 
   Widget _buildCounter(String title, int value, Function(int) onChanged) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space4, vertical: AppTheme.space2),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          Expanded(child: Text(title, style: context.text.bodyLarge)),
+          IconButton.filledTonal(
+            tooltip: 'Decrease',
+            onPressed: (_isEditing && value > 0) ? () => onChanged(value - 1) : null,
+            icon: const Icon(Icons.remove_rounded),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: (_isEditing && value > 0) ? () => onChanged(value - 1) : null,
-                  icon: Icon(
-                    Icons.remove_circle_outline,
-                    color: (_isEditing && value > 0) ? Colors.purple : Colors.grey.shade400,
-                  ),
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(4),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    '$value',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _isEditing ? () => onChanged(value + 1) : null,
-                  icon: Icon(
-                    Icons.add_circle_outline,
-                    color: _isEditing ? Colors.purple : Colors.grey.shade400,
-                  ),
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(4),
-                ),
-              ],
-            ),
+          SizedBox(
+            width: 36,
+            child: Text('$value', textAlign: TextAlign.center, style: context.text.titleMedium),
+          ),
+          IconButton.filledTonal(
+            tooltip: 'Increase',
+            onPressed: _isEditing ? () => onChanged(value + 1) : null,
+            icon: const Icon(Icons.add_rounded),
           ),
         ],
       ),

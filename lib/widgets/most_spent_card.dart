@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
+/// Highlights the category with the highest spend this period.
 class MostSpentCard extends StatelessWidget {
   final String category;
   final String amount;
@@ -12,76 +14,40 @@ class MostSpentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: Colors.white, // Clean white background to match the dashboard
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF3E5F5), width: 1.5), // Much softer, subtle border
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06), // Matches the new Summary Card shadows exactly
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3E5F5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.local_fire_department_rounded, // Visual cue for "burning" money
-                  color: Color(0xFF9C27B0),
-                  size: 20,
-                ),
+    final app = context.appColors;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.space4),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppTheme.space3),
+              decoration: BoxDecoration(
+                color: app.expenseContainer,
+                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'Most Spent Category',
-                style: TextStyle(
-                  color: Color(0xFF7B1FA2),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Icon(Icons.local_fire_department_rounded, color: app.onExpenseContainer),
+            ),
+            const SizedBox(width: AppTheme.space4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Most spent on', style: context.text.labelMedium?.copyWith(color: context.colors.onSurfaceVariant)),
+                  Text(category, style: context.text.titleMedium, overflow: TextOverflow.ellipsis),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  category,
-                  style: const TextStyle(
-                    color: Colors.black87, // High contrast for better readability
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+            ),
+            Text(
+              amount,
+              style: context.text.titleMedium?.copyWith(
+                color: app.expense,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
-              const SizedBox(width: 8),
-              Text(
-                amount,
-                style: const TextStyle(
-                  color: Color(0xFFC62828), // Deep red to subtly indicate high expense
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

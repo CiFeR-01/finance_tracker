@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/income_record.dart';
+import '../models/recurring_rule.dart';
 import '../services/finance_service.dart';
 
 class AddIncomeViewModel extends ChangeNotifier {
@@ -29,9 +30,6 @@ class AddIncomeViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  static const double SOCSO_LIMIT = 350.0;
-  static const double EPF_LIMIT = 4000.0;
-
   final List<String> categories = [
     'Salary',
     'Bonus',
@@ -40,6 +38,9 @@ class AddIncomeViewModel extends ChangeNotifier {
     'Allowance',
     'Others'
   ];
+
+  static const double SOCSO_LIMIT = 350.0;
+  static const double EPF_LIMIT = 4000.0;
 
   String _selectedCategory = 'Salary';
   DateTime _selectedDate = DateTime.now();
@@ -58,6 +59,18 @@ class AddIncomeViewModel extends ChangeNotifier {
   bool get isSocsoLimitReached => _isSocsoLimitReached;
   bool get isEpfLimitReached => _isEpfLimitReached;
 
+  double get currentYearSocsoTotal {
+    return _incomes
+        .where((i) => i.incomeDate.year == _selectedDate.year)
+        .fold(0.0, (sum, item) => sum + item.socsoAmount);
+  }
+
+  double get currentYearEpfTotal {
+    return _incomes
+        .where((i) => i.incomeDate.year == _selectedDate.year)
+        .fold(0.0, (sum, item) => sum + item.epfAmount);
+  }
+
   // Setters/Actions
   void setCategory(String category) {
     _selectedCategory = category;
@@ -75,20 +88,19 @@ class AddIncomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Use optional named parameters to prevent errors if called with partial data
-  void updateInputs({String? epfStr, String? socsoStr}) {
-    if (epfStr != null) _currentEpfInput = double.tryParse(epfStr) ?? 0.0;
-    if (socsoStr != null) _currentSocsoInput = double.tryParse(socsoStr) ?? 0.0;
+  void updateInputs(String epfStr, String socsoStr) {
+    _currentEpfInput = double.tryParse(epfStr) ?? 0.0;
+    _currentSocsoInput = double.tryParse(socsoStr) ?? 0.0;
     _checkLimits();
   }
 
   void _checkLimits() {
     final year = _selectedDate.year;
-    final totalSocsoInDB = _incomes
+    final totalSocsoInDB = _otherIncomes
         .where((i) => i.incomeDate.year == year)
         .fold(0.0, (sum, item) => sum + item.socsoAmount);
-
-    final totalEpfInDB = _incomes
+    
+    final totalEpfInDB = _otherIncomes
         .where((i) => i.incomeDate.year == year)
         .fold(0.0, (sum, item) => sum + item.epfAmount);
 
@@ -97,7 +109,40 @@ class AddIncomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  IncomeRecord? _editing;
+
+  /// The record being edited, or null when adding a new one.
+  IncomeRecord? get editing => _editing;
+  bool get isEditing => _editing != null;
+
+  /// Fills the form state from [record] so it can be changed and saved back.
+  void loadForEdit(IncomeRecord record) {
+    _editing = record;
+    _selectedCategory = categories.contains(record.category) ? record.category : 'Others';
+    _selectedDate = record.incomeDate;
+    _proofImagePath = record.proofImagePath;
+    _repeatMonthly = false;
+    // The limit check compares the year's total plus this entry, so leave the
+    // record's own amounts out of the stored total while editing it.
+    _currentEpfInput = record.epfAmount;
+    _currentSocsoInput = record.socsoAmount;
+    _checkLimits();
+  }
+
+  Iterable<IncomeRecord> get _otherIncomes => _incomes.where((i) => i.id != _editing?.id);
+
+  bool _repeatMonthly = false;
+
+  /// When on, saving also creates a monthly recurring rule from this entry.
+  bool get repeatMonthly => _repeatMonthly;
+
+  void setRepeatMonthly(bool value) {
+    _repeatMonthly = value;
+    notifyListeners();
+  }
+
   void clearData() {
+    _editing = null;
     _selectedCategory = 'Salary';
     _selectedDate = DateTime.now();
     _proofImagePath = null;
@@ -105,6 +150,7 @@ class AddIncomeViewModel extends ChangeNotifier {
     _currentSocsoInput = 0.0;
     _isSocsoLimitReached = false;
     _isEpfLimitReached = false;
+    _repeatMonthly = false;
     notifyListeners();
   }
 
@@ -124,8 +170,9 @@ class AddIncomeViewModel extends ChangeNotifier {
     final pcb = double.tryParse(pcbStr) ?? 0;
     final netIncome = total - epf - socso - pcb;
 
+    final editing = _editing;
     final entry = IncomeRecord(
-      id: '',
+      id: editing?.id ?? '',
       userId: user.uid,
       totalIncome: total,
       epfAmount: epf,
@@ -136,10 +183,29 @@ class AddIncomeViewModel extends ChangeNotifier {
       description: description,
       incomeDate: _selectedDate,
       proofImagePath: _proofImagePath,
-      createdAt: DateTime.now(),
+      createdAt: editing?.createdAt ?? DateTime.now(),
     );
 
+    if (editing != null) {
+      await _financeService.updateIncome(entry);
+      return true;
+    }
     await _financeService.insertIncome(entry);
+    if (_repeatMonthly) {
+      await _financeService.saveRecurringRule(RecurringRule(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        isIncome: true,
+        amount: total,
+        epf: epf,
+        socso: socso,
+        pcb: pcb,
+        category: _selectedCategory,
+        description: description,
+        dayOfMonth: _selectedDate.day,
+        // This month's record was just saved, so the rule starts next month.
+        lastGenerated: DateTime(_selectedDate.year, _selectedDate.month),
+      ));
+    }
     return true;
   }
 }

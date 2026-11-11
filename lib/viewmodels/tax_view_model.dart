@@ -6,6 +6,8 @@ import '../models/expense_record.dart';
 import '../models/user_model.dart';
 import '../services/finance_service.dart';
 import '../services/auth_service.dart';
+import '../services/tax_estimator.dart';
+import '../models/tax_rates.dart';
 
 class TaxViewModel extends ChangeNotifier {
   final FinanceService _financeService;
@@ -19,6 +21,11 @@ class TaxViewModel extends ChangeNotifier {
   StreamSubscription? _incomeSub;
   StreamSubscription? _expenseSub;
   StreamSubscription? _userSub;
+  StreamSubscription? _ratesSub;
+
+  final int year = DateTime.now().year;
+  late TaxRates _rates = TaxRates.bundled(year);
+  TaxRates get rates => _rates;
 
   TaxViewModel(this._financeService, this._authService) {
     _init();
@@ -41,11 +48,16 @@ class TaxViewModel extends ChangeNotifier {
       });
 
       _incomeSub = _financeService.watchAllIncomes().listen((data) {
-        _incomes = data;
+        // Relief limits are per tax (calendar) year, so only this year's records count.
+        _incomes = data.where((i) => i.incomeDate.year == DateTime.now().year).toList();
+        notifyListeners();
+      });
+      _ratesSub = _financeService.watchTaxRates(year).listen((r) {
+        _rates = r;
         notifyListeners();
       });
       _expenseSub = _financeService.watchAllExpenses().listen((data) {
-        _expenses = data;
+        _expenses = data.where((e) => e.expenseDate.year == DateTime.now().year).toList();
         notifyListeners();
       });
     }
@@ -58,6 +70,7 @@ class TaxViewModel extends ChangeNotifier {
     _incomeSub?.cancel();
     _expenseSub?.cancel();
     _userSub?.cancel();
+    _ratesSub?.cancel();
     super.dispose();
   }
 
@@ -66,7 +79,15 @@ class TaxViewModel extends ChangeNotifier {
 
     // 1. Fixed Reliefs from Profile
     if (_userModel != null) {
-      items.addAll(_userModel!.taxProfile.getFixedReliefItems());
+      for (final item in _userModel!.taxProfile.getFixedReliefItems()) {
+        // The basic individual relief changes with the Budget, so take it
+        // from the year's rates rather than the profile's fixed amount.
+        if (item['title'] == 'Individual & Dependent') {
+          items.add({...item, 'amount': _rates.personalRelief, 'limit': _rates.personalRelief});
+        } else {
+          items.add(item);
+        }
+      }
     }
 
     // 2. Variable Reliefs
@@ -74,7 +95,9 @@ class TaxViewModel extends ChangeNotifier {
       {
         'title': 'Life Insurance and EPF',
         'amount': _incomes.fold(0.0, (sum, item) => sum + item.epfAmount),
-        'limit': 7000.0,
+        // EPF counts for up to RM 4,000 of this RM 7,000 relief; the other
+        // RM 3,000 is for life insurance, which the app does not track.
+        'limit': 4000.0,
       },
       {
         'title': 'SOCSO Contribution',
@@ -163,6 +186,26 @@ class TaxViewModel extends ChangeNotifier {
     return _expenses
         .where((e) => e.isTaxDeductible && targetCategories.contains(e.category))
         .fold(0.0, (sum, item) => sum + item.amount);
+  }
+
+  /// Tax estimate for the year, with salary projected to December.
+  /// Null until there is some income to estimate from.
+  TaxEstimate? get estimate {
+    if (_incomes.isEmpty) return null;
+    final income = TaxEstimator.yearIncome(_incomes, year);
+    // EPF and SOCSO relief use the projected full-year contributions.
+    double capped(double amount, double limit) => amount > limit ? limit : amount;
+    final otherReliefs = reliefItems
+        .where((i) => i['title'] != 'Life Insurance and EPF' && i['title'] != 'SOCSO Contribution')
+        .fold(0.0, (sum, i) => sum + capped(i['amount'] as double, i['limit'] as double));
+    final reliefs = otherReliefs + capped(income.epf, 4000) + capped(income.socso, 350);
+    return TaxEstimator.estimate(
+      income: income,
+      reliefs: reliefs,
+      rates: _rates,
+      donations: totalDonations,
+      zakat: totalZakat,
+    );
   }
 
   bool get hasNoRecords => _incomes.isEmpty && _expenses.isEmpty;
