@@ -1,5 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../theme/formatters.dart';
 
 /// A dialog that shows a detailed view of categories with full names and amounts.
 /// 
@@ -22,8 +24,7 @@ class CategoryDetailDialog extends StatelessWidget {
     double total = data.values.fold(0, (sum, val) => sum + val);
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      title: Text(title, style: context.text.titleLarge),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -35,8 +36,8 @@ class CategoryDetailDialog extends StatelessWidget {
               child: PieChart(
                 PieChartData(
                   sections: _generateSections(),
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 40,
+                  sectionsSpace: 3,
+                  centerSpaceRadius: 56,
                 ),
               ),
             ),
@@ -71,12 +72,12 @@ class CategoryDetailDialog extends StatelessWidget {
                             children: [
                               Text(
                                 key,
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                style: context.text.titleSmall,
                                 softWrap: true,
                               ),
                               Text(
-                                'RM ${value.toStringAsFixed(2)} (${percentage.toStringAsFixed(1)}%)',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                '${formatRM(value)} (${percentage.toStringAsFixed(1)}%)',
+                                style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
                               ),
                             ],
                           ),
@@ -106,7 +107,7 @@ class CategoryDetailDialog extends StatelessWidget {
         color: palette[index % palette.length],
         value: value,
         title: '',
-        radius: 60,
+        radius: 32,
       );
     });
   }

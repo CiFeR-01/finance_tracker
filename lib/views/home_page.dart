@@ -7,10 +7,14 @@ import '../widgets/monthly_comparison_card.dart';
 import '../widgets/selected_month_detail_chart.dart';
 import '../widgets/category_pie_charts.dart';
 import '../widgets/bottom_nav_bar.dart';
+import '../widgets/page_header.dart';
+import '../theme/app_theme.dart';
+import '../theme/formatters.dart';
 import 'add_page.dart';
 import 'tax_page.dart';
 import 'profile_page.dart';
 import 'report_page.dart';
+import 'budgets_page.dart';
 import '../viewmodels/home_view_model.dart';
 
 class HomePage extends StatefulWidget {
@@ -34,7 +38,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: _pages[_currentIndex < _pages.length ? _currentIndex : 0],
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentIndex,
@@ -54,200 +57,205 @@ class HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<HomeViewModel>();
+    final app = context.appColors;
+    final colors = context.colors;
+    final periodName = DateFormat('MMMM yyyy').format(viewModel.selectedPeriod);
+    final spentRatio = viewModel.totalIncome <= 0
+        ? 0.0
+        : (viewModel.totalExpenses / viewModel.totalIncome).clamp(0.0, 1.0);
 
     return Column(
       children: [
-        // 1. Top Header with Purple Gradient & Curved Bottom
-        Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        PageHeader(
+          title: 'Overview',
+          subtitle: 'Your money this month',
+          actions: [
+            PeriodPill<DateTime>(
+              value: viewModel.selectedPeriod,
+              options: viewModel.availablePeriods,
+              label: (p) => DateFormat('MMM yyyy').format(p),
+              onChanged: viewModel.setSelectedPeriod,
             ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20.0, 10.0, 20.0, 20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'FinanceTracker',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // UPDATED: Glassmorphism Dropdown Button
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: viewModel.selectedMonth,
-                            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-                            dropdownColor: const Color(0xFF7B1FA2),
-                            onChanged: (int? newValue) {
-                              if (newValue != null) {
-                                viewModel.setSelectedMonth(newValue);
-                              }
-                            },
-                            items: List.generate(12, (index) => index + 1).map((int month) {
-                              final isSelected = month == viewModel.selectedMonth;
-                              return DropdownMenuItem<int>(
-                                value: month,
-                                child: Text(
-                                  DateFormat('MMM').format(DateTime(2024, month)),
-                                  style: TextStyle(
-                                    color: isSelected ? const Color(0xFFE1BEE7) : Colors.white,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-
-                    ],
-                  ),
-                  const Text(
-                    'Manage your Finances',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ],
         ),
-
-        // Scrollable Content
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              children: [
-                if (viewModel.isExpenseHigh)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade700),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Budget Alert!',
-                                style: TextStyle(
-                                  color: Colors.red.shade900,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                viewModel.budgetAlertMessage,
-                                style: TextStyle(
-                                  color: Colors.red.shade700,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.5,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space2, AppTheme.space4, AppTheme.space5),
+            children: [
+              // Hero: what's left this month, with how much of income is spent.
+              Container(
+                padding: const EdgeInsets.all(AppTheme.space5),
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SummaryCard(
-                      title: 'Expenses',
-                      amount: 'RM ${viewModel.totalExpenses.toStringAsFixed(2)}',
-                      backgroundColor: const Color(0xFFFFEBEE),
-                      textColor: const Color(0xFFC62828),
+                    Text('Left this month', style: context.text.labelLarge?.copyWith(color: colors.onPrimaryContainer)),
+                    const SizedBox(height: AppTheme.space1),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        formatRM(viewModel.savings),
+                        style: context.text.displaySmall?.copyWith(
+                          color: colors.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
                     ),
-                    SummaryCard(
-                      title: 'Income',
-                      amount: 'RM ${viewModel.totalIncome.toStringAsFixed(2)}',
-                      backgroundColor: const Color(0xFFE8F5E9),
-                      textColor: const Color(0xFF2E7D32),
+                    const SizedBox(height: AppTheme.space4),
+                    LinearProgressIndicator(
+                      value: spentRatio,
+                      color: viewModel.isExpenseHigh ? app.expense : colors.primary,
+                      backgroundColor: colors.onPrimaryContainer.withValues(alpha: 0.12),
                     ),
-                    SummaryCard(
-                      title: 'Tax Reclaimable',
-                      amount: 'RM ${viewModel.taxReclaimable.toStringAsFixed(2)}',
-                      backgroundColor: const Color(0xFFF3E5F5),
-                      textColor: const Color(0xFF7B1FA2),
-                    ),
-                    SummaryCard(
-                      title: 'Saving',
-                      amount: 'RM ${viewModel.savings.toStringAsFixed(2)}',
-                      backgroundColor: const Color(0xFFE3F2FD),
-                      textColor: const Color(0xFF1565C0),
+                    const SizedBox(height: AppTheme.space2),
+                    Text(
+                      viewModel.totalIncome <= 0
+                          ? 'Add income to see how much you have spent'
+                          : '${viewModel.expensePercentage.toStringAsFixed(0)}% of income spent',
+                      style: context.text.bodySmall?.copyWith(color: colors.onPrimaryContainer),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                MostSpentCard(
-                  category: viewModel.mostSpentCategory,
-                  amount: 'RM ${viewModel.mostSpentAmount.toStringAsFixed(2)}',
+              ),
+              if (viewModel.isExpenseHigh) ...[
+                const SizedBox(height: AppTheme.space3),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.space4, vertical: AppTheme.space3),
+                  decoration: BoxDecoration(
+                    color: app.warningContainer,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall + 4),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: app.onWarningContainer),
+                      const SizedBox(width: AppTheme.space3),
+                      Expanded(
+                        child: Text(
+                          viewModel.budgetAlertMessage,
+                          style: context.text.bodyMedium?.copyWith(color: app.onWarningContainer),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
-                SelectedMonthDetailChart(
-                  incomes: viewModel.filteredIncomes,
-                  expenses: viewModel.filteredExpenses,
-                  monthName: DateFormat('MMMM').format(DateTime(DateTime.now().year, viewModel.selectedMonth)),
-                ),
-                const SizedBox(height: 20),
-                CategoryPieCharts(
-                  incomes: viewModel.filteredIncomes,
-                  expenses: viewModel.filteredExpenses,
-                  monthName: DateFormat('MMMM').format(DateTime(DateTime.now().year, viewModel.selectedMonth)),
-                ),
-                const SizedBox(height: 20),
-                MonthlyComparisonCard(
-                  incomes: viewModel.incomes,
-                  expenses: viewModel.expenses,
-                ),
-                const SizedBox(height: 20),
               ],
-            ),
+              const SizedBox(height: AppTheme.space3),
+              SizedBox(
+                height: 96,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: SummaryCard(
+                        title: 'Income',
+                        icon: Icons.south_west_rounded,
+                        amount: formatRM(viewModel.totalIncome),
+                        backgroundColor: app.incomeContainer,
+                        textColor: app.onIncomeContainer,
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.space2),
+                    Expanded(
+                      child: SummaryCard(
+                        title: 'Spent',
+                        icon: Icons.north_east_rounded,
+                        amount: formatRM(viewModel.totalExpenses),
+                        backgroundColor: app.expenseContainer,
+                        textColor: app.onExpenseContainer,
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.space2),
+                    Expanded(
+                      child: SummaryCard(
+                        title: 'Tax relief',
+                        icon: Icons.verified_rounded,
+                        amount: formatRM(viewModel.taxReclaimable),
+                        backgroundColor: app.taxContainer,
+                        textColor: app.onTaxContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTheme.space3),
+              _BudgetsSummary(viewModel: viewModel),
+              const SizedBox(height: AppTheme.space3),
+              MostSpentCard(
+                category: viewModel.mostSpentCategory,
+                amount: formatRM(viewModel.mostSpentAmount),
+              ),
+              const SizedBox(height: AppTheme.space3),
+              SelectedMonthDetailChart(
+                incomes: viewModel.filteredIncomes,
+                expenses: viewModel.filteredExpenses,
+                monthName: periodName,
+              ),
+              const SizedBox(height: AppTheme.space3),
+              CategoryPieCharts(
+                incomes: viewModel.filteredIncomes,
+                expenses: viewModel.filteredExpenses,
+                monthName: periodName,
+              ),
+              const SizedBox(height: AppTheme.space3),
+              MonthlyComparisonCard(
+                incomes: viewModel.incomes,
+                expenses: viewModel.expenses,
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Home card: the three budgets closest to their limit, or a prompt to set some.
+class _BudgetsSummary extends StatelessWidget {
+  final HomeViewModel viewModel;
+  const _BudgetsSummary({required this.viewModel});
+
+  @override
+  Widget build(BuildContext context) {
+    void open() => Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetsPage()));
+    final statuses = viewModel.budgetStatuses;
+
+    if (statuses.isEmpty) {
+      return Card(
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: AppTheme.space4, vertical: AppTheme.space2),
+          leading: CircleAvatar(
+            backgroundColor: context.colors.secondaryContainer,
+            child: Icon(Icons.savings_outlined, color: context.colors.onSecondaryContainer),
+          ),
+          title: const Text('Set monthly budgets'),
+          subtitle: const Text('Get warned before you overspend in a category'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: open,
+        ),
+      );
+    }
+
+    return SectionCard(
+      title: 'Budgets',
+      trailing: TextButton(onPressed: open, child: const Text('Manage')),
+      padding: const EdgeInsets.fromLTRB(AppTheme.space5 - 4, AppTheme.space3, AppTheme.space2, AppTheme.space3),
+      child: Column(
+        children: [
+          for (final b in statuses.take(3))
+            BudgetTile(
+              category: b.category,
+              limit: b.limit,
+              spent: b.spent,
+              onTap: open,
+              padding: const EdgeInsets.only(right: AppTheme.space3, bottom: AppTheme.space3),
+            ),
+        ],
+      ),
     );
   }
 }

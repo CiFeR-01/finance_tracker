@@ -1,14 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import '../models/income_record.dart';
 import '../viewmodels/add_income_view_model.dart';
+import '../widgets/form_parts.dart';
+import '../theme/app_theme.dart';
+import '../theme/formatters.dart';
 
 class AddIncomePage extends StatefulWidget {
-  const AddIncomePage({super.key});
+  const AddIncomePage({super.key, this.existing});
+
+  /// When set, the form edits this record instead of adding a new one.
+  final IncomeRecord? existing;
 
   @override
   State<AddIncomePage> createState() => _AddIncomePageState();
@@ -25,19 +31,33 @@ class _AddIncomePageState extends State<AddIncomePage> {
   @override
   void initState() {
     super.initState();
+    final existing = widget.existing;
+    if (existing != null) {
+      String money(double v) => v.toStringAsFixed(2);
+      _totalIncomeController.text = money(existing.totalIncome);
+      _epfController.text = money(existing.epfAmount);
+      _socsoController.text = money(existing.socsoAmount);
+      _pcbController.text = money(existing.pcbAmount);
+      _descriptionController.text = existing.description ?? '';
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AddIncomeViewModel>().clearData();
+      final vm = context.read<AddIncomeViewModel>();
+      final existing = widget.existing;
+      if (existing == null) {
+        vm.clearData();
+      } else {
+        vm.loadForEdit(existing);
+      }
     });
 
-    // Real-time limit checking
     _epfController.addListener(_onInputChanged);
     _socsoController.addListener(_onInputChanged);
   }
 
   void _onInputChanged() {
     context.read<AddIncomeViewModel>().updateInputs(
-      epfStr: _epfController.text,
-      socsoStr: _socsoController.text,
+      _epfController.text,
+      _socsoController.text,
     );
   }
 
@@ -77,22 +97,14 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
   void _saveIncome(AddIncomeViewModel viewModel) async {
     if (_formKey.currentState!.validate()) {
-      final total = double.tryParse(_totalIncomeController.text) ?? 0;
-      final epf = double.tryParse(_epfController.text) ?? 0;
-      final socso = double.tryParse(_socsoController.text) ?? 0;
-      final pcb = double.tryParse(_pcbController.text) ?? 0;
-
-      // Logical Validation: Sum of deductions cannot exceed total income
-      if ((epf + socso + pcb) > total) {
+      double v(TextEditingController c) => double.tryParse(c.text) ?? 0;
+      // Deductions come out of gross income, so together they can't exceed it.
+      if (v(_epfController) + v(_socsoController) + v(_pcbController) > v(_totalIncomeController)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: Sum of EPF, SOCSO, and PCB cannot exceed Total Income.'),
-            backgroundColor: Colors.red,
-          ),
+          const SnackBar(content: Text('EPF, SOCSO and PCB together can\'t be more than gross income.')),
         );
         return;
       }
-
       final success = await viewModel.saveIncome(
         totalIncomeStr: _totalIncomeController.text,
         epfStr: _epfController.text,
@@ -103,7 +115,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Income saved successfully')),
+          SnackBar(content: Text(widget.existing == null ? 'Income saved' : 'Income updated')),
         );
         Navigator.pop(context);
       } else if (mounted) {
@@ -119,223 +131,102 @@ class _AddIncomePageState extends State<AddIncomePage> {
     final viewModel = context.watch<AddIncomeViewModel>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            height: 100,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+      appBar: AppBar(title: Text(viewModel.isEditing ? 'Edit income' : 'Add income')),
+      bottomNavigationBar: BottomActionBar(label: viewModel.isEditing ? 'Save changes' : 'Save income', onPressed: () => _saveIncome(viewModel)),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space2, AppTheme.space4, AppTheme.space5),
+          children: [
+            const FormLabel('Gross income'),
+            FormInput(
+              controller: _totalIncomeController,
+              hint: '0.00',
+              isNumber: true,
+              isMoney: true,
+              validator: FormInput.amount('Gross income', allowZero: false),
             ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(right: 48.0),
-                        child: Text(
-                          'Add Incomes',
-                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            const FormLabel('EPF'),
+            FormInput(
+              controller: _epfController,
+              hint: '0.00',
+              isNumber: true,
+              isMoney: true,
+              validator: FormInput.amount('EPF'),
             ),
-          ),
-
-          // Form
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabel('Total Income'),
-                    _buildTextField(
-                      controller: _totalIncomeController,
-                      hint: '0.0',
-                      isNumber: true,
-                      validator: (val) => _validateAmount(val, 'Total Income', allowZero: false),
-                    ),
-                    _buildLabel('EPF'),
-                    _buildTextField(
-                      controller: _epfController,
-                      hint: 'RM1000',
-                      isNumber: true,
-                      validator: (val) => _validateAmount(val, 'EPF'),
-                    ),
-                    if (viewModel.isEpfLimitReached)
-                      _buildLimitWarning('Note: You have already reached the RM ${AddIncomeViewModel.EPF_LIMIT.toInt()} EPF relief limit; this entry won\'t further reduce your tax.'),
-                    _buildLabel('Socso'),
-                    _buildTextField(
-                      controller: _socsoController,
-                      hint: 'RM30',
-                      isNumber: true,
-                      validator: (val) => _validateAmount(val, 'Socso'),
-                    ),
-                    if (viewModel.isSocsoLimitReached)
-                      _buildLimitWarning('Note: You have already reached the RM ${AddIncomeViewModel.SOCSO_LIMIT.toInt()} SOCSO relief limit; this entry won\'t further reduce your tax.'),
-                    _buildLabel('PCB'),
-                    _buildTextField(
-                      controller: _pcbController,
-                      hint: 'RM1000',
-                      isNumber: true,
-                      validator: (val) => _validateAmount(val, 'PCB'),
-                    ),
-                    _buildLabel('Category'),
-                    DropdownButtonFormField<String>(
-                      value: viewModel.selectedCategory,
-                      decoration: _inputDecoration(''),
-                      items: viewModel.categories.map((String category) {
-                        return DropdownMenuItem(value: category, child: Text(category));
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          viewModel.setCategory(newValue);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildLabel('Descriptions'),
-                    _buildTextField(
-                      controller: _descriptionController,
-                      hint: 'Examples...',
-                      validator: (val) => (val != null && val.length > 100) ? 'Description too long (max 100 chars)' : null,
-                    ),
-                    _buildLabel('Date'),
-                    InkWell(
-                      onTap: () => _selectDate(context, viewModel),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(DateFormat('dd/MM/yyyy').format(viewModel.selectedDate)),
-                            const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildLabel('Proof'),
-                    GestureDetector(
-                      onTap: () => _pickImage(viewModel),
-                      child: Container(
-                        width: double.infinity,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
-                          color: Colors.grey.shade50,
-                        ),
-                        child: viewModel.proofImagePath == null
-                            ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text('Capture payslip/proof', style: TextStyle(color: Colors.grey)),
-                          ],
-                        )
-                            : ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: () => _saveIncome(viewModel),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        ),
-                        child: const Text('Save Income', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
+            if (viewModel.isEpfLimitReached)
+              _buildLimitWarning(
+                  'You have reached the ${formatRM(AddIncomeViewModel.EPF_LIMIT, whole: true)} EPF relief limit, so this entry won\'t lower your tax further.'),
+            const FormLabel('SOCSO'),
+            FormInput(
+              controller: _socsoController,
+              hint: '0.00',
+              isNumber: true,
+              isMoney: true,
+              validator: FormInput.amount('SOCSO'),
             ),
-          ),
-        ],
+            if (viewModel.isSocsoLimitReached)
+              _buildLimitWarning(
+                  'You have reached the ${formatRM(AddIncomeViewModel.SOCSO_LIMIT, whole: true)} SOCSO relief limit, so this entry won\'t lower your tax further.'),
+            const FormLabel('PCB'),
+            FormInput(
+              controller: _pcbController,
+              hint: '0.00',
+              isNumber: true,
+              isMoney: true,
+              validator: FormInput.amount('PCB'),
+            ),
+            const FormLabel('Category'),
+            DropdownButtonFormField<String>(
+              value: viewModel.selectedCategory,
+              isExpanded: true,
+              items: viewModel.categories.map((String category) {
+                return DropdownMenuItem(value: category, child: Text(category, overflow: TextOverflow.ellipsis));
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  viewModel.setCategory(newValue);
+                }
+              },
+            ),
+            const SizedBox(height: AppTheme.space4),
+            const FormLabel('Description'),
+            FormInput(controller: _descriptionController, hint: 'e.g. November salary', validator: FormInput.maxLength(100)),
+            const FormLabel('Date'),
+            DateField(date: viewModel.selectedDate, onTap: () => _selectDate(context, viewModel)),
+            if (!viewModel.isEditing)
+              RepeatMonthlyTile(
+              value: viewModel.repeatMonthly,
+              dayOfMonth: viewModel.selectedDate.day,
+              onChanged: viewModel.setRepeatMonthly,
+            ),
+            const SizedBox(height: AppTheme.space4),
+            const FormLabel('Payslip'),
+            ProofPicker(
+              imagePath: viewModel.proofImagePath,
+              emptyLabel: 'Add a photo of the payslip',
+              onTap: () => _pickImage(viewModel),
+            ),
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
     );
   }
 
   Widget _buildLimitWarning(String message) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Text(
-        message,
-        style: const TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w500),
+    final app = context.appColors;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppTheme.space4),
+      padding: const EdgeInsets.all(AppTheme.space3),
+      decoration: BoxDecoration(color: app.warningContainer, borderRadius: BorderRadius.circular(AppTheme.radiusSmall)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 18, color: app.onWarningContainer),
+          const SizedBox(width: AppTheme.space2),
+          Expanded(child: Text(message, style: context.text.bodySmall?.copyWith(color: app.onWarningContainer))),
+        ],
       ),
-    );
-  }
-
-  String? _validateAmount(String? value, String fieldName, {bool allowZero = true}) {
-    if (value == null || value.isEmpty) return 'Required';
-    final n = double.tryParse(value);
-    if (n == null) return 'Invalid number';
-    if (n < 0) return '$fieldName cannot be negative';
-    if (!allowZero && n == 0) return '$fieldName must be greater than zero';
-    return null;
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    bool isNumber = false,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
-        decoration: _inputDecoration(hint),
-        validator: validator ?? (value) => (value == null || value.isEmpty) ? 'Required' : null,
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
     );
   }
 }

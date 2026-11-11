@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'theme/app_theme.dart';
+import 'theme/theme_controller.dart';
 import 'views/home_page.dart';
 import 'views/login_page.dart';
 import 'services/finance_service.dart';
@@ -22,6 +24,9 @@ import 'viewmodels/add_income_view_model.dart';
 // Global finance service instance that provides access to the backend data.
 late FinanceService financeService;
 
+// Light/dark choice from the Profile tab, shared across logins.
+final ThemeController themeController = ThemeController();
+
 /// The main function initializes the Flutter framework, Firebase, 
 /// and the global finance service before launching the app.
 void main() async {
@@ -34,6 +39,7 @@ void main() async {
 
   // Instantiate the shared FinanceService.
   financeService = FinanceService();
+  await themeController.load();
 
   runApp(const FinanceTrackerApp());
 }
@@ -60,16 +66,18 @@ class FinanceTrackerApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
             ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
             ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
+            ChangeNotifierProvider.value(value: themeController),
           ],
-          child: MaterialApp(
-            title: 'FinanceTracker',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.purple),
-              useMaterial3: true,
-              fontFamily: 'Roboto', // Modern, readable font choice.
+          child: ListenableBuilder(
+            listenable: themeController,
+            builder: (context, _) => MaterialApp(
+              title: 'FinanceTracker',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: themeController.mode, // Set in Profile > Appearance.
+              home: _buildHome(snapshot),
             ),
-            home: _buildHome(snapshot),
           ),
         );
       },

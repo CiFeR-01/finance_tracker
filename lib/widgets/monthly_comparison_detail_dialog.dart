@@ -1,5 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../theme/formatters.dart';
 import 'package:intl/intl.dart';
 
 class MonthlyComparisonDetailDialog extends StatelessWidget {
@@ -16,6 +18,8 @@ class MonthlyComparisonDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.appColors;
+    final colors = context.colors;
     double maxAmount = 1000;
     List<BarChartGroupData> barGroups = [];
 
@@ -33,13 +37,13 @@ class MonthlyComparisonDetailDialog extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: exp,
-              color: Colors.red,
+              color: app.expense,
               width: 12,
               borderRadius: BorderRadius.circular(4),
             ),
             BarChartRodData(
               toY: inc,
-              color: Colors.green,
+              color: app.income,
               width: 12,
               borderRadius: BorderRadius.circular(4),
             ),
@@ -51,8 +55,7 @@ class MonthlyComparisonDetailDialog extends StatelessWidget {
     maxAmount = ((maxAmount / 500).ceil() * 500).toDouble();
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text('Yearly Comparison', style: TextStyle(fontWeight: FontWeight.bold)),
+      title: Text('This year by month', style: context.text.titleLarge),
       content: SizedBox(
         width: MediaQuery.of(context).size.width * 0.9,
         child: Column(
@@ -81,7 +84,7 @@ class MonthlyComparisonDetailDialog extends StatelessWidget {
                                 padding: const EdgeInsets.only(top: 8.0),
                                 child: Text(
                                   DateFormat('MMM').format(months[index]),
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: context.text.labelMedium,
                                 ),
                               );
                             }
@@ -96,7 +99,7 @@ class MonthlyComparisonDetailDialog extends StatelessWidget {
                           getTitlesWidget: (value, meta) {
                             return Text(
                               value.toInt().toString(),
-                              style: const TextStyle(fontSize: 10, color: Colors.grey),
+                              style: context.text.labelSmall?.copyWith(color: colors.onSurfaceVariant),
                             );
                           },
                         ),
@@ -109,7 +112,7 @@ class MonthlyComparisonDetailDialog extends StatelessWidget {
                       horizontalInterval: 500,
                       drawVerticalLine: false,
                       getDrawingHorizontalLine: (value) => FlLine(
-                        color: Colors.grey.shade200,
+                        color: colors.outlineVariant,
                         strokeWidth: 1,
                       ),
                     ),
@@ -139,22 +142,21 @@ class MonthlyComparisonDetailDialog extends StatelessWidget {
                       children: [
                         Expanded(
                           flex: 2,
-                          child: Text(key, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          child: Text(key, style: context.text.titleSmall),
                         ),
                         Expanded(
-                          child: Text('RM ${inc.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontSize: 12)),
+                          child: Text(formatRM(inc, whole: true), style: context.text.bodySmall?.copyWith(color: app.income)),
                         ),
                         Expanded(
-                          child: Text('RM ${exp.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontSize: 12)),
+                          child: Text(formatRM(exp, whole: true), style: context.text.bodySmall?.copyWith(color: app.expense)),
                         ),
                         Expanded(
                           child: Text(
-                            '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(0)}',
+                            formatRM(diff, signed: true, whole: true),
                             textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: diff >= 0 ? Colors.blue : Colors.redAccent,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                            style: context.text.labelMedium?.copyWith(
+                              color: diff >= 0 ? app.savings : app.expense,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),

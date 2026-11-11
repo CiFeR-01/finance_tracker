@@ -2,13 +2,19 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/transaction_card.dart';
+import '../widgets/page_header.dart';
+import '../theme/app_theme.dart';
+import '../theme/formatters.dart';
 import 'add_income_page.dart';
 import 'add_expense_page.dart';
+import 'recurring_page.dart';
 import '../viewmodels/home_view_model.dart';
 import '../models/income_record.dart';
 import '../models/expense_record.dart';
 import 'package:intl/intl.dart';
 
+/// The Transactions tab: income and expense lists for the selected month,
+/// with search, details, delete-with-undo and an add menu.
 class AddPage extends StatefulWidget {
   const AddPage({super.key});
 
@@ -34,200 +40,111 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  void _showIncomeDetails(BuildContext context, IncomeRecord income) {
+  void _showDetailsSheet(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+    required Widget Function() editPage,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
         maxChildSize: 0.9,
         expand: false,
-        builder: (context, scrollController) => SingleChildScrollView(
+        builder: (context, scrollController) => ListView(
           controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const Text(
-                'Income Details',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple,
-                ),
-              ),
-              const Divider(height: 32),
-              _buildDetailRow(
-                'Amount',
-                'RM ${income.totalIncome.toStringAsFixed(2)}',
-              ),
-              _buildDetailRow(
-                'EPF',
-                'RM ${income.epfAmount.toStringAsFixed(2)}',
-              ),
-              _buildDetailRow(
-                'Socso',
-                'RM ${income.socsoAmount.toStringAsFixed(2)}',
-              ),
-              _buildDetailRow(
-                'PCB',
-                'RM ${income.pcbAmount.toStringAsFixed(2)}',
-              ),
-              const Divider(height: 32),
-              _buildDetailRow(
-                'Net Income',
-                'RM ${income.netIncome.toStringAsFixed(2)}',
-                isBold: true,
-                color: Colors.green,
-              ),
-              _buildDetailRow('Category', income.category),
-              _buildDetailRow(
-                'Date',
-                DateFormat('dd MMMM yyyy').format(income.incomeDate),
-              ),
-              if (income.description != null && income.description!.isNotEmpty)
-                _buildDetailRow('Description', income.description!),
-              if (income.proofImagePath != null) ...[
-                const SizedBox(height: 20),
-                const Text(
-                  'Proof of Income',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Image.file(
-                    File(income.proofImagePath!),
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => const Text('Image not found'),
-                  ),
+          padding: const EdgeInsets.fromLTRB(AppTheme.space5, 0, AppTheme.space5, AppTheme.space6),
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text(title, style: context.text.headlineSmall)),
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(this.context, MaterialPageRoute(builder: (_) => editPage()));
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit'),
                 ),
               ],
-              const SizedBox(height: 30),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppTheme.space4),
+            ...children,
+          ],
         ),
       ),
     );
+  }
+
+  Widget _proofImage(BuildContext context, String label, String path) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppTheme.space5),
+        Text(label, style: context.text.titleSmall),
+        const SizedBox(height: AppTheme.space2),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          child: Image.file(
+            File(path),
+            fit: BoxFit.cover,
+            errorBuilder: (c, e, s) => Text('Image not found', style: context.text.bodyMedium),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showIncomeDetails(BuildContext context, IncomeRecord income) {
+    final app = context.appColors;
+    _showDetailsSheet(context, title: 'Income details', editPage: () => AddIncomePage(existing: income), children: [
+      _buildDetailRow(context, 'Gross income', formatRM(income.totalIncome)),
+      _buildDetailRow(context, 'EPF', formatRM(income.epfAmount)),
+      _buildDetailRow(context, 'SOCSO', formatRM(income.socsoAmount)),
+      _buildDetailRow(context, 'PCB', formatRM(income.pcbAmount)),
+      const Padding(padding: EdgeInsets.symmetric(vertical: AppTheme.space2), child: Divider()),
+      _buildDetailRow(context, 'Net income', formatRM(income.netIncome), isBold: true, color: app.income),
+      _buildDetailRow(context, 'Category', income.category),
+      _buildDetailRow(context, 'Date', DateFormat('d MMMM yyyy').format(income.incomeDate)),
+      if (income.description != null && income.description!.isNotEmpty)
+        _buildDetailRow(context, 'Description', income.description!),
+      if (income.proofImagePath != null) _proofImage(context, 'Proof of income', income.proofImagePath!),
+    ]);
   }
 
   void _showExpenseDetails(BuildContext context, ExpenseRecord expense) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const Text(
-                'Expense Details',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple,
-                ),
-              ),
-              const Divider(height: 32),
-              _buildDetailRow(
-                'Amount',
-                'RM ${expense.amount.toStringAsFixed(2)}',
-                isBold: true,
-                color: Colors.red,
-              ),
-              _buildDetailRow('Category', expense.category),
-              _buildDetailRow(
-                'Date',
-                DateFormat('dd MMMM yyyy').format(expense.expenseDate),
-              ),
-              _buildDetailRow(
-                'Tax Deductible',
-                expense.isTaxDeductible ? 'Yes' : 'No',
-              ),
-              if (expense.description != null &&
-                  expense.description!.isNotEmpty)
-                _buildDetailRow('Description', expense.description!),
-              if (expense.proofImagePath != null) ...[
-                const SizedBox(height: 20),
-                const Text(
-                  'Proof of Expense',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Image.file(
-                    File(expense.proofImagePath!),
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => const Text('Image not found'),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 30),
-            ],
-          ),
-        ),
-      ),
-    );
+    final app = context.appColors;
+    _showDetailsSheet(context, title: 'Expense details', editPage: () => AddExpensePage(existing: expense), children: [
+      _buildDetailRow(context, 'Amount', formatRM(expense.amount), isBold: true, color: app.expense),
+      _buildDetailRow(context, 'Category', expense.category),
+      _buildDetailRow(context, 'Date', DateFormat('d MMMM yyyy').format(expense.expenseDate)),
+      _buildDetailRow(context, 'Tax deductible', expense.isTaxDeductible ? 'Yes' : 'No'),
+      if (expense.description != null && expense.description!.isNotEmpty)
+        _buildDetailRow(context, 'Description', expense.description!),
+      if (expense.proofImagePath != null) _proofImage(context, 'Proof of expense', expense.proofImagePath!),
+    ]);
   }
 
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    bool isBold = false,
-    Color? color,
-  }) {
+  Widget _buildDetailRow(BuildContext context, String label, String value, {bool isBold = false, Color? color}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space2),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
-          const SizedBox(width: 16),
+          Text(label, style: context.text.bodyLarge?.copyWith(color: context.colors.onSurfaceVariant)),
+          const SizedBox(width: AppTheme.space4),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              style: context.text.bodyLarge?.copyWith(
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
                 color: color,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -239,192 +156,141 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<HomeViewModel>();
+    final app = context.appColors;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(200),
-        child: Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
+      body: Column(
+        children: [
+          PageHeader(
+            title: 'Activity',
+            actions: [
+              PeriodPill<DateTime>(
+                value: viewModel.selectedPeriod,
+                options: viewModel.availablePeriods,
+                label: (p) => DateFormat('MMM yyyy').format(p),
+                onChanged: viewModel.setSelectedPeriod,
+              ),
+              IconButton(
+                tooltip: 'Recurring',
+                icon: const Icon(Icons.event_repeat_rounded),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecurringPage())),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Add transaction',
+                offset: const Offset(0, 52),
+                onSelected: (value) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => value == 'income' ? const AddIncomePage() : const AddExpensePage(),
+                    ),
+                  );
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'income',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.south_west_rounded, color: app.income),
+                      title: const Text('Add income'),
+                    ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      DropdownButton<int>(
-                        value: viewModel.selectedMonth,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Color(0xFFE1BEE7),
-                        ),
-                        underline: Container(),
-                        dropdownColor: const Color(0xFF7B1FA2),
-                        onChanged: (int? newValue) {
-                          if (newValue != null) {
-                            viewModel.setSelectedMonth(newValue);
-                          }
-                        },
-                        items: List.generate(12, (index) => index + 1).map((
-                          int month,
-                        ) {
-                          final isSelected = month == viewModel.selectedMonth;
-                          return DropdownMenuItem<int>(
-                            value: month,
-                            child: Text(
-                              DateFormat('MMMM').format(DateTime(2024, month)),
-                              style: TextStyle(
-                                color: isSelected
-                                    ? const Color(0xFFE1BEE7)
-                                    : Colors.white,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const Text(
-                        'Transactions',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        icon: const Icon(
-                          Icons.add_circle_outline,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        offset: const Offset(0, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        onSelected: (value) {
-                          if (value == 'income') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AddIncomePage(),
-                              ),
-                            );
-                          } else if (value == 'expense') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AddExpensePage(),
-                              ),
-                            );
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'income',
-                            child: Row(
-                              children: [
-                                Icon(Icons.add_circle, color: Colors.green),
-                                SizedBox(width: 10),
-                                Text('Add Income'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'expense',
-                            child: Row(
-                              children: [
-                                Icon(Icons.remove_circle, color: Colors.red),
-                                SizedBox(width: 10),
-                                Text('Add Expense'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                  PopupMenuItem(
+                    value: 'expense',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.north_east_rounded, color: app.expense),
+                      title: const Text('Add expense'),
+                    ),
+                  ),
+                ],
+                child: IgnorePointer(
+                  child: IconButton.filled(
+                    onPressed: () {},
+                    icon: const Icon(Icons.add_rounded),
+                  ),
+                ),
+              ),
+            ],
+            bottom: Column(
+              children: [
+                SearchBar(
+                  controller: _searchController,
+                  hintText: 'Search transactions',
+                  leading: const Icon(Icons.search_rounded),
+                  elevation: const WidgetStatePropertyAll(0),
+                  backgroundColor: WidgetStatePropertyAll(context.colors.surfaceContainerHigh),
+                  padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: AppTheme.space4)),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.toLowerCase();
+                    });
+                  },
+                ),
+                const SizedBox(height: AppTheme.space3),
+                Container(
+                  height: 44,
+                  padding: const EdgeInsets.all(AppTheme.space1),
+                  decoration: BoxDecoration(
+                    color: context.colors.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    tabs: const [
+                      Tab(text: 'Income'),
+                      Tab(text: 'Expenses'),
                     ],
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 4.0,
-                  ),
-                  child: Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Search transactions...',
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
-                          fontSize: 14,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                        ),
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value.toLowerCase();
-                        });
-                      },
-                    ),
-                  ),
-                ),
-                TabBar(
-                  controller: _tabController,
-                  indicatorColor: Colors.white,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  indicatorWeight: 3,
-                  tabs: const [
-                    Tab(text: 'INCOMES'),
-                    Tab(text: 'EXPENSES'),
-                  ],
                 ),
               ],
             ),
           ),
-        ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [_buildIncomeTab(viewModel), _buildExpenseTab(viewModel)],
+            ),
+          ),
+        ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildIncomeTab(viewModel), _buildExpenseTab(viewModel)],
+    );
+  }
+
+  /// Deletes a record right away and offers a few seconds to undo it.
+  Future<void> _deleteWithUndo({
+    required String label,
+    required Future<void> Function() delete,
+    required Future<void> Function() restore,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await delete();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+      return;
+    }
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('$label deleted'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            try {
+              await restore();
+            } catch (e) {
+              messenger.showSnackBar(SnackBar(content: Text('Could not restore: $e')));
+            }
+          },
+        ),
       ),
     );
   }
 
   Widget _buildIncomeTab(HomeViewModel viewModel) {
+    final app = context.appColors;
     final filtered = viewModel.filteredIncomes
         .where(
           (i) =>
@@ -438,22 +304,28 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
     return _buildListContent(
       items: filtered,
       total: total,
-      color: Colors.green,
+      color: app.income,
       icon: Icons.account_balance_wallet_outlined,
-      emptyMessage: 'No income records found.',
+      emptyMessage: 'No income this month',
       itemBuilder: (income) => TransactionCard(
-        amount: '+RM ${income.netIncome.toStringAsFixed(2)}',
+        amount: formatRM(income.netIncome, signed: true),
         category: income.category,
-        date: DateFormat('dd/MM/yyyy').format(income.incomeDate),
-        borderColor: Colors.green,
-        amountColor: Colors.green,
-        onDelete: () => viewModel.deleteIncome(income.id),
+        date: DateFormat('d MMM').format(income.incomeDate),
+        borderColor: app.income,
+        amountColor: app.income,
+        icon: Icons.south_west_rounded,
+        onDelete: () => _deleteWithUndo(
+          label: 'Income',
+          delete: () => viewModel.deleteIncome(income.id),
+          restore: () => viewModel.restoreIncome(income),
+        ),
         onTap: () => _showIncomeDetails(context, income),
       ),
     );
   }
 
   Widget _buildExpenseTab(HomeViewModel viewModel) {
+    final app = context.appColors;
     final filtered = viewModel.filteredExpenses
         .where(
           (e) =>
@@ -467,17 +339,22 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
     return _buildListContent(
       items: filtered,
       total: total,
-      color: Colors.red,
+      color: app.expense,
       icon: Icons.shopping_bag_outlined,
-      emptyMessage: 'No expense records found.',
+      emptyMessage: 'No expenses this month',
       itemBuilder: (expense) => TransactionCard(
-        amount: '-RM ${expense.amount.toStringAsFixed(2)}',
+        amount: formatRM(-expense.amount),
         category: expense.category,
-        date: DateFormat('dd/MM/yyyy').format(expense.expenseDate),
-        borderColor: Colors.red,
-        amountColor: Colors.red,
-        taxTag: expense.isTaxDeductible ? 'Tax deduct' : null,
-        onDelete: () => viewModel.deleteExpense(expense.id),
+        date: DateFormat('d MMM').format(expense.expenseDate),
+        borderColor: app.expense,
+        amountColor: context.colors.onSurface,
+        icon: Icons.north_east_rounded,
+        taxTag: expense.isTaxDeductible ? 'Tax relief' : null,
+        onDelete: () => _deleteWithUndo(
+          label: 'Expense',
+          delete: () => viewModel.deleteExpense(expense.id),
+          restore: () => viewModel.restoreExpense(expense),
+        ),
         onTap: () => _showExpenseDetails(context, expense),
       ),
     );
@@ -491,99 +368,63 @@ class _AddPageState extends State<AddPage> with SingleTickerProviderStateMixin {
     required String emptyMessage,
     required Widget Function(dynamic) itemBuilder,
   }) {
+    final colors = context.colors;
     if (items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 60, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              emptyMessage,
-              style: TextStyle(color: Colors.grey[500], fontSize: 16),
-            ),
+            Icon(icon, size: 56, color: colors.outline),
+            const SizedBox(height: AppTheme.space4),
+            Text(emptyMessage, style: context.text.titleMedium?.copyWith(color: colors.onSurfaceVariant)),
           ],
         ),
       );
     }
 
     final Map<String, List<dynamic>> grouped = {};
-
     for (var item in items) {
-      final DateTime date = item is IncomeRecord
-          ? item.incomeDate
-          : (item as ExpenseRecord).expenseDate;
-
-      final String key = DateFormat('dd MMMM yyyy').format(date);
-
-      if (!grouped.containsKey(key)) {
-        grouped[key] = [];
-      }
-
-      grouped[key]!.add(item);
+      final DateTime date = item is IncomeRecord ? item.incomeDate : (item as ExpenseRecord).expenseDate;
+      final String key = DateFormat('EEEE, d MMMM').format(date);
+      grouped.putIfAbsent(key, () => []).add(item);
     }
-
     final List<String> sortedKeys = grouped.keys.toList();
 
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: color.withOpacity(0.05),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Monthly Total:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
-                ),
-              ),
-              Text(
-                'RM ${total.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            itemCount: grouped.length,
-            itemBuilder: (context, index) {
-              final String dateKey = sortedKeys[index];
-              final List<dynamic> dateItems = grouped[dateKey]!;
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12.0,
-                      horizontal: 4,
-                    ),
-                    child: Text(
-                      dateKey,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple[700],
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space2, AppTheme.space4, AppTheme.space5),
+      itemCount: grouped.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.space2),
+            child: Row(
+              children: [
+                Text('Total this month', style: context.text.labelLarge?.copyWith(color: colors.onSurfaceVariant)),
+                const Spacer(),
+                Text(
+                  formatRM(total),
+                  style: context.text.titleMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
-                  ...dateItems.map((item) => itemBuilder(item)),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
+                ),
+              ],
+            ),
+          );
+        }
+        final String dateKey = sortedKeys[index - 1];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppTheme.space1, AppTheme.space3, 0, AppTheme.space2),
+              child: Text(dateKey, style: context.text.labelLarge?.copyWith(color: colors.primary)),
+            ),
+            ...grouped[dateKey]!.map((item) => itemBuilder(item)),
+          ],
+        );
+      },
     );
   }
 }
