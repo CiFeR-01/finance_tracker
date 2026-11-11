@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/expense_record.dart';
+import '../models/categories.dart';
+import '../models/recurring_rule.dart';
 import '../services/finance_service.dart';
 
 class AddExpenseViewModel extends ChangeNotifier {
@@ -14,10 +16,13 @@ class AddExpenseViewModel extends ChangeNotifier {
   }
 
   void _init() {
-    _expenseSub = _financeService.watchAllExpenses().listen((data) {
-      _expenses = data;
-      _checkTaxDeductibilityLimit();
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _expenseSub = _financeService.watchAllExpenses().listen((data) {
+        _expenses = data;
+        _checkTaxDeductibilityLimit();
+      });
+    }
   }
 
   @override
@@ -26,7 +31,9 @@ class AddExpenseViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  final List<String> categories = [
+  final List<String> categories = expenseCategories;
+
+  final List<String> _deductibleCategories = [
     'Medical expenses',
     'Health screening',
     'Lifestyle',
@@ -40,8 +47,7 @@ class AddExpenseViewModel extends ChangeNotifier {
     'Private Retirement Scheme',
     'Insurance',
     'Zakat',
-    'Donation/Gift',
-    'Others'
+    'Donation/Gift'
   ];
 
   final Map<String, double> _categoryLimits = {
@@ -59,11 +65,11 @@ class AddExpenseViewModel extends ChangeNotifier {
     'Insurance': 4000.0,
   };
 
-  String _selectedCategory = 'Medical expenses';
+  String _selectedCategory = 'Food & dining';
   DateTime _selectedDate = DateTime.now();
   String? _proofImagePath;
-  bool _isTaxDeductible = true;
-  double _currentAmountInput = 0.0;
+  bool _isTaxDeductible = false;
+  double _currentAmount = 0.0;
   bool _isLimitExceeded = false;
 
   // Getters
@@ -71,32 +77,74 @@ class AddExpenseViewModel extends ChangeNotifier {
   DateTime get selectedDate => _selectedDate;
   String? get proofImagePath => _proofImagePath;
   bool get isTaxDeductible => _isTaxDeductible;
+  bool get isCategoryDeductible => _deductibleCategories.contains(_selectedCategory);
   bool get isLimitExceeded => _isLimitExceeded;
-  bool get isCategoryDeductible => _categoryLimits.containsKey(_selectedCategory) || _selectedCategory == 'Zakat' || _selectedCategory == 'Donation/Gift';
 
-  double getLimitForCategory(String category) => _categoryLimits[category] ?? 0.0;
+  double getRemainingLimit(String category) {
+    final limit = _categoryLimits[category];
+    if (limit == null) return double.infinity;
+
+    final alreadyClaimed = _expenses
+        .where((e) =>
+            e.isTaxDeductible &&
+            e.category == category &&
+            // When editing, the record's own old amount must not count against it.
+            e.id != _editing?.id &&
+            // Relief limits reset every tax year, so only count the year being claimed.
+            e.expenseDate.year == _selectedDate.year)
+        .fold(0.0, (sum, item) => sum + item.amount);
+    
+    return limit - alreadyClaimed;
+  }
 
   // Setters/Actions
   void setCategory(String category) {
     _selectedCategory = category;
+    // Relief categories start ticked; the limit check below can untick them.
     _isTaxDeductible = isCategoryDeductible;
     _checkTaxDeductibilityLimit();
     notifyListeners();
   }
 
   void setAmount(String amountStr) {
-    _currentAmountInput = double.tryParse(amountStr) ?? 0.0;
+    _currentAmount = double.tryParse(amountStr) ?? 0.0;
     _checkTaxDeductibilityLimit();
     notifyListeners();
   }
 
+  void _checkTaxDeductibilityLimit() {
+    if (!isCategoryDeductible) {
+      _isLimitExceeded = false;
+      _isTaxDeductible = false;
+      return;
+    }
+
+    final remaining = getRemainingLimit(_selectedCategory);
+    
+    if (_currentAmount > remaining) {
+      _isLimitExceeded = true;
+      _isTaxDeductible = false;
+    } else {
+      _isLimitExceeded = false;
+      // We don't automatically set it back to true if it was RM 0 before, 
+      // but usually when user selects category it starts as deductible if applicable.
+      if (_currentAmount == 0 || (_isTaxDeductible == false && _isLimitExceeded == false)) {
+         // Optionally reset to true if we just came back from an exceeded state
+         // But let's keep it simple: if it's within limit, we default it to true when changing categories
+      }
+    }
+  }
+
   void setTaxDeductible(bool value) {
-    _isTaxDeductible = value;
-    notifyListeners();
+    if (isCategoryDeductible && !_isLimitExceeded) {
+      _isTaxDeductible = value;
+      notifyListeners();
+    }
   }
 
   void setDate(DateTime date) {
     _selectedDate = date;
+    // The remaining relief depends on the tax year of the date.
     _checkTaxDeductibilityLimit();
     notifyListeners();
   }
@@ -106,27 +154,45 @@ class AddExpenseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _checkTaxDeductibilityLimit() {
-    if (!_categoryLimits.containsKey(_selectedCategory)) {
-      _isLimitExceeded = false;
-      return;
-    }
+  ExpenseRecord? _editing;
 
-    final limit = _categoryLimits[_selectedCategory]!;
-    final alreadyClaimed = _expenses
-        .where((e) => e.isTaxDeductible && e.category == _selectedCategory && e.expenseDate.year == _selectedDate.year)
-        .fold(0.0, (sum, item) => sum + item.amount);
+  /// The record being edited, or null when adding a new one.
+  ExpenseRecord? get editing => _editing;
+  bool get isEditing => _editing != null;
 
-    _isLimitExceeded = (alreadyClaimed + _currentAmountInput) >= limit;
+  /// Fills the form state from [record] so it can be changed and saved back.
+  void loadForEdit(ExpenseRecord record) {
+    _editing = record;
+    _selectedCategory = categories.contains(record.category) ? record.category : 'Others';
+    _selectedDate = record.expenseDate;
+    _proofImagePath = record.proofImagePath;
+    _currentAmount = record.amount;
+    _repeatMonthly = false;
+    _isLimitExceeded = false;
+    _isTaxDeductible = record.isTaxDeductible && isCategoryDeductible;
+    _checkTaxDeductibilityLimit();
+    notifyListeners();
+  }
+
+  bool _repeatMonthly = false;
+
+  /// When on, saving also creates a monthly recurring rule from this entry.
+  bool get repeatMonthly => _repeatMonthly;
+
+  void setRepeatMonthly(bool value) {
+    _repeatMonthly = value;
+    notifyListeners();
   }
 
   void clearData() {
-    _selectedCategory = 'Medical expenses';
+    _editing = null;
+    _selectedCategory = 'Food & dining';
     _selectedDate = DateTime.now();
     _proofImagePath = null;
-    _isTaxDeductible = true;
-    _currentAmountInput = 0.0;
+    _isTaxDeductible = false;
+    _currentAmount = 0.0;
     _isLimitExceeded = false;
+    _repeatMonthly = false;
     notifyListeners();
   }
 
@@ -134,10 +200,12 @@ class AddExpenseViewModel extends ChangeNotifier {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
 
-    final amount = double.tryParse(amountStr) ?? 0.0;
+    final amount = double.tryParse(amountStr);
+    if (amount == null) return false;
 
+    final editing = _editing;
     final entry = ExpenseRecord(
-      id: '',
+      id: editing?.id ?? '',
       userId: user.uid,
       amount: amount,
       category: _selectedCategory,
@@ -145,10 +213,27 @@ class AddExpenseViewModel extends ChangeNotifier {
       expenseDate: _selectedDate,
       proofImagePath: _proofImagePath,
       isTaxDeductible: _isTaxDeductible,
-      createdAt: DateTime.now(),
+      createdAt: editing?.createdAt ?? DateTime.now(),
     );
 
+    if (editing != null) {
+      await _financeService.updateExpense(entry);
+      return true;
+    }
     await _financeService.insertExpense(entry);
+    if (_repeatMonthly) {
+      await _financeService.saveRecurringRule(RecurringRule(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        isIncome: false,
+        amount: amount,
+        category: _selectedCategory,
+        description: description,
+        dayOfMonth: _selectedDate.day,
+        isTaxDeductible: _isTaxDeductible,
+        // This month's record was just saved, so the rule starts next month.
+        lastGenerated: DateTime(_selectedDate.year, _selectedDate.month),
+      ));
+    }
     return true;
   }
 }

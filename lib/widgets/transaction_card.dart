@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
+/// One row in a transaction list: category icon, category + date, amount.
 class TransactionCard extends StatelessWidget {
   final String amount;
   final String category;
@@ -9,6 +11,7 @@ class TransactionCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onTap;
   final String? taxTag;
+  final IconData icon;
 
   const TransactionCard({
     super.key,
@@ -20,89 +23,84 @@ class TransactionCard extends StatelessWidget {
     required this.onDelete,
     this.onTap,
     this.taxTag,
+    this.icon = Icons.receipt_long_rounded,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: borderColor.withOpacity(0.5), width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.space2),
+      child: Card(
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space3, AppTheme.space1, AppTheme.space3),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: borderColor.withValues(alpha: 0.14),
+                  child: Icon(icon, color: borderColor, size: 22),
+                ),
+                const SizedBox(width: AppTheme.space3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          amount,
-                          style: TextStyle(
-                            color: amountColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          category,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Text(category, style: context.text.titleSmall, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(date, style: context.text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+                          if (taxTag != null) ...[
+                            const SizedBox(width: AppTheme.space2),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: context.appColors.taxContainer,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.verified_rounded, size: 12, color: context.appColors.onTaxContainer),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        taxTag!,
+                                        style: context.text.labelSmall?.copyWith(color: context.appColors.onTaxContainer),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        date,
-                        style: const TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                      if (taxTag != null) ...[
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.purple.shade200),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              taxTag!,
-                              style: TextStyle(color: Colors.purple.shade300, fontSize: 10),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      ]
-                    ],
+                ),
+                const SizedBox(width: AppTheme.space2),
+                Text(
+                  amount,
+                  style: context.text.titleSmall?.copyWith(
+                    color: amountColor,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
-                ],
-              ),
+                ),
+                IconButton(
+                  tooltip: 'Delete',
+                  icon: Icon(Icons.delete_outline_rounded, color: colors.onSurfaceVariant),
+                  onPressed: onDelete,
+                ),
+              ],
             ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              onPressed: onDelete,
-            ),
-          ],
+          ),
         ),
       ),
     );

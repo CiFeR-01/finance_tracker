@@ -5,65 +5,89 @@ import 'package:intl/intl.dart';
 import '../models/income_record.dart';
 import '../models/expense_record.dart';
 import '../viewmodels/tax_view_model.dart';
+import '../widgets/page_header.dart';
+import '../widgets/tax_estimate_card.dart';
+import '../theme/app_theme.dart';
+import '../theme/formatters.dart';
+import 'add_expense_page.dart';
+import 'add_income_page.dart';
 
 class TaxPage extends StatelessWidget {
   const TaxPage({super.key});
 
+  /// Lets the user pick which kind of record to add, then opens that form.
+  void _showAddRecordChooser(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.south_west_rounded, color: context.appColors.income),
+              title: const Text('Add income'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddIncomePage()));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.north_east_rounded, color: context.appColors.expense),
+              title: const Text('Add expense'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddExpensePage()));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showTransactions(BuildContext context, String title, List<dynamic> transactions) {
+    final app = context.appColors;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (context) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              margin: const EdgeInsets.only(top: 10),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-            ),
             Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.purple),
-              ),
+              padding: const EdgeInsets.fromLTRB(AppTheme.space5, 0, AppTheme.space5, AppTheme.space3),
+              child: Text(title, style: context.text.headlineSmall),
             ),
-            const Divider(),
             Expanded(
               child: transactions.isEmpty
-                  ? const Center(child: Text('No transactions found'))
+                  ? Center(child: Text('No transactions found', style: context.text.bodyLarge))
                   : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: transactions.length,
-                itemBuilder: (context, index) {
-                  final tx = transactions[index];
-                  if (tx is IncomeRecord) {
-                    double amount = 0;
-                    if (title == 'Life Insurance and EPF') amount = tx.epfAmount;
-                    if (title == 'SOCSO Contribution') amount = tx.socsoAmount;
-
-                    return ListTile(
-                      title: Text(tx.category),
-                      subtitle: Text(DateFormat('dd MMM yyyy').format(tx.incomeDate)),
-                      trailing: Text('RM ${amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                    );
-                  } else if (tx is ExpenseRecord) {
-                    return ListTile(
-                      title: Text(tx.category),
-                      subtitle: Text(DateFormat('dd MMM yyyy').format(tx.expenseDate)),
-                      trailing: Text('RM ${tx.amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                    );
-                  }
-                  return const SizedBox();
-                },
-              ),
+                      padding: const EdgeInsets.symmetric(horizontal: AppTheme.space2),
+                      itemCount: transactions.length,
+                      itemBuilder: (context, index) {
+                        final tx = transactions[index];
+                        if (tx is IncomeRecord) {
+                          double amount = 0;
+                          if (title == 'Life Insurance and EPF') amount = tx.epfAmount;
+                          if (title == 'SOCSO Contribution') amount = tx.socsoAmount;
+                          return ListTile(
+                            title: Text(tx.category),
+                            subtitle: Text(DateFormat('d MMM yyyy').format(tx.incomeDate)),
+                            trailing: Text(formatRM(amount),
+                                style: context.text.titleSmall?.copyWith(color: app.income, fontWeight: FontWeight.w700)),
+                          );
+                        } else if (tx is ExpenseRecord) {
+                          return ListTile(
+                            title: Text(tx.category),
+                            subtitle: Text(DateFormat('d MMM yyyy').format(tx.expenseDate)),
+                            trailing: Text(formatRM(tx.amount),
+                                style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
             ),
           ],
         ),
@@ -98,43 +122,37 @@ class TaxPage extends StatelessWidget {
       return false;
     }
 
+    final year = DateTime.now().year;
+    final header = PageHeader(title: 'Tax', subtitle: 'Reliefs for assessment year $year');
+
     if (viewModel.hasNoRecords) {
       return Scaffold(
-        backgroundColor: Colors.white,
         body: Column(
           children: [
-            // This is your new premium header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.only(top: 60, bottom: 20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2)]),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              child: const Center(
-                child: Text('Tax Dashboard', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-              ),
-            ),
-
-            // This is your centered "No records" content
+            header,
             Expanded(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(AppTheme.space5),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.search_off, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('No records found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pushNamed(context, '/add'),
-                        child: const Text('Add a Record'),
-                      )
+                      Icon(Icons.receipt_long_outlined, size: 56, color: context.colors.outline),
+                      const SizedBox(height: AppTheme.space4),
+                      Text('No records for $year yet', style: context.text.titleMedium),
+                      const SizedBox(height: AppTheme.space2),
+                      Text(
+                        'Add income and expenses to track your tax reliefs.',
+                        textAlign: TextAlign.center,
+                        style: context.text.bodyMedium?.copyWith(color: context.colors.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: AppTheme.space5),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(minimumSize: const Size(200, 52)),
+                        onPressed: () => _showAddRecordChooser(context),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Add a record'),
+                      ),
                     ],
                   ),
                 ),
@@ -146,181 +164,154 @@ class TaxPage extends StatelessWidget {
     }
 
     final claimedReliefs = viewModel.claimedReliefs;
+    final colors = context.colors;
+    final app = context.appColors;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'Tax Dashboard',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.purple,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey.shade300),
-              ),
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Total Tax Relief Claimed:',
-                      style: TextStyle(fontSize: 16, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'RM ${viewModel.totalReliefClaimed.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    if (claimedReliefs.isEmpty)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Text(
-                            'No tax reliefs claimed yet.',
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
+      body: Column(
+        children: [
+          header,
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space2, AppTheme.space4, AppTheme.space5),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.space5),
+                  decoration: BoxDecoration(
+                    color: app.taxContainer,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSheet),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Total relief claimed', style: context.text.labelLarge?.copyWith(color: app.onTaxContainer)),
+                      const SizedBox(height: AppTheme.space1),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          formatRM(viewModel.totalReliefClaimed),
+                          style: context.text.displaySmall?.copyWith(
+                            color: app.onTaxContainer,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
-                      )
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: claimedReliefs.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 20),
-                        itemBuilder: (context, index) {
-                          final item = claimedReliefs[index];
-                          final title = item['title'] as String;
-                          final isFixed = checkIfFixed(title);
-
-                          return InkWell(
-                            onTap: isFixed ? null : () {
-                              final txs = viewModel.getTransactionsForRelief(title);
-                              _showTransactions(context, title, txs);
-                            },
-                            child: _buildReliefItem(
-                              title,
-                              item['amount'],
-                              item['limit'],
-                              isClickable: !isFixed,
-                            ),
-                          );
-                        },
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                if (viewModel.estimate != null) ...[
+                  const SizedBox(height: AppTheme.space3),
+                  TaxEstimateCard(estimate: viewModel.estimate!),
+                ],
+                const SizedBox(height: AppTheme.space3),
+                SectionCard(
+                  title: 'Reliefs',
+                  child: claimedReliefs.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppTheme.space4),
+                          child: Center(
+                            child: Text('No tax reliefs claimed yet.',
+                                style: context.text.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (final item in claimedReliefs)
+                              Builder(builder: (context) {
+                                final title = item['title'] as String;
+                                final isFixed = checkIfFixed(title);
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                  onTap: isFixed
+                                      ? null
+                                      : () {
+                                          final txs = viewModel.getTransactionsForRelief(title);
+                                          _showTransactions(context, title, txs);
+                                        },
+                                  child: _buildReliefItem(context, title, item['amount'], item['limit'], isClickable: !isFixed),
+                                );
+                              }),
+                          ],
+                        ),
+                ),
+                if (viewModel.totalDonations > 0) ...[
+                  const SizedBox(height: AppTheme.space3),
+                  _buildSimpleInfoCard(
+                    context,
+                    'Donations & gifts',
+                    viewModel.totalDonations,
+                    onTap: () {
+                      final txs = viewModel.getTransactionsForRelief('Total Donations');
+                      _showTransactions(context, 'Donations & gifts', txs);
+                    },
+                  ),
+                ],
+                if (viewModel.totalZakat > 0) ...[
+                  const SizedBox(height: AppTheme.space3),
+                  _buildSimpleInfoCard(
+                    context,
+                    'Zakat (rebate)',
+                    viewModel.totalZakat,
+                    isRebate: true,
+                    onTap: () {
+                      final txs = viewModel.getTransactionsForRelief('Zakat');
+                      _showTransactions(context, 'Zakat', txs);
+                    },
+                  ),
+                ],
+                const SizedBox(height: AppTheme.space4),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Update your Profile to change fixed relief settings.')),
+                      );
+                    },
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    label: const Text('Adjust fixed reliefs in Profile'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            if (viewModel.totalDonations > 0) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text('Donations & Gifts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple)),
-              ),
-              const SizedBox(height: 12),
-              _buildSimpleInfoCard(
-                'Total Donations',
-                viewModel.totalDonations,
-                onTap: () {
-                  final txs = viewModel.getTransactionsForRelief('Total Donations');
-                  _showTransactions(context, 'Donations & Gifts', txs);
-                },
-              ),
-              const SizedBox(height: 24),
-            ],
-            if (viewModel.totalZakat > 0) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text('Tax Rebates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple)),
-              ),
-              const SizedBox(height: 12),
-              _buildSimpleInfoCard(
-                'Zakat',
-                viewModel.totalZakat,
-                isRebate: true,
-                onTap: () {
-                  final txs = viewModel.getTransactionsForRelief('Zakat');
-                  _showTransactions(context, 'Zakat', txs);
-                },
-              ),
-              const SizedBox(height: 24),
-            ],
-            Center(
-              child: TextButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Update your Profile to change fixed relief settings.')),
-                  );
-                },
-                icon: const Icon(Icons.settings, size: 16),
-                label: const Text('Adjust Fixed Reliefs in Profile'),
-                style: TextButton.styleFrom(foregroundColor: Colors.grey),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildReliefItem(String title, double current, double limit, {bool isClickable = false}) {
-    double progress = (current / limit).clamp(0.0, 1.0);
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+  Widget _buildReliefItem(BuildContext context, String title, double current, double limit, {bool isClickable = false}) {
+    final app = context.appColors;
+    final colors = context.colors;
+    final progress = limit <= 0 ? 0.0 : (current / limit).clamp(0.0, 1.0);
+    final isMaxed = progress >= 1.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.space2 + 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
-              if (isClickable) const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+              Expanded(child: Text(title, style: context.text.bodyLarge?.copyWith(fontWeight: FontWeight.w500))),
+              if (isMaxed) ...[
+                Icon(Icons.check_circle_rounded, size: 16, color: app.warning),
+                const SizedBox(width: AppTheme.space1),
+                Text('Limit reached', style: context.text.labelSmall?.copyWith(color: app.warning)),
+              ],
+              if (isClickable) Icon(Icons.chevron_right_rounded, size: 20, color: colors.onSurfaceVariant),
             ],
           ),
-          const SizedBox(height: 8),
-          Container(
-            height: 12,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: progress >= 1.0 ? Colors.orange : Colors.purple,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppTheme.space2),
+          LinearProgressIndicator(value: progress, color: isMaxed ? app.warning : colors.primary),
+          const SizedBox(height: AppTheme.space1),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              'RM ${current.toStringAsFixed(0)} / ${limit.toStringAsFixed(0)}',
-              style: TextStyle(
-                  fontSize: 13,
-                  color: progress >= 1.0 ? Colors.orange.shade900 : Colors.black54,
-                  fontWeight: progress >= 1.0 ? FontWeight.bold : FontWeight.normal
+              '${formatRM(current, whole: true)} of ${formatRM(limit, whole: true)}',
+              style: context.text.labelMedium?.copyWith(
+                color: isMaxed ? app.warning : colors.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -329,22 +320,23 @@ class TaxPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSimpleInfoCard(String title, double amount, {bool isRebate = false, VoidCallback? onTap}) {
+  Widget _buildSimpleInfoCard(BuildContext context, String title, double amount, {bool isRebate = false, VoidCallback? onTap}) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade300)),
-      color: Colors.white,
       child: ListTile(
         onTap: onTap,
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-        trailing: Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppTheme.space5 - 4, vertical: AppTheme.space1),
+        title: Text(title, style: context.text.titleSmall),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'RM ${amount.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isRebate ? Colors.green.shade700 : Colors.black),
+              formatRM(amount),
+              style: context.text.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isRebate ? context.appColors.income : context.colors.onSurface,
+              ),
             ),
-            if (onTap != null) const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+            if (onTap != null) Icon(Icons.chevron_right_rounded, color: context.colors.onSurfaceVariant),
           ],
         ),
       ),

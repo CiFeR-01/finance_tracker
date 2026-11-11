@@ -13,7 +13,7 @@ class ExpenseOptionSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.edit_note, color: Colors.purple),
+            leading: const Icon(Icons.edit_note_rounded),
             title: const Text('Enter Manually'),
             onTap: () {
               Navigator.pop(context);
@@ -21,7 +21,7 @@ class ExpenseOptionSheet extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.qr_code_scanner, color: Colors.purple),
+            leading: const Icon(Icons.document_scanner_outlined),
             title: const Text('Scan Receipt'),
             onTap: () {
               Navigator.pop(context);

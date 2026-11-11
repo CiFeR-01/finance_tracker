@@ -1,14 +1,21 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import '../models/expense_record.dart';
 import '../viewmodels/add_expense_view_model.dart';
+import '../widgets/form_parts.dart';
+import '../theme/app_theme.dart';
+import '../theme/formatters.dart';
+import '../services/receipt_scanner.dart';
 
 class AddExpensePage extends StatefulWidget {
-  const AddExpensePage({super.key});
+  const AddExpensePage({super.key, this.existing});
+
+  /// When set, the form edits this record instead of adding a new one.
+  final ExpenseRecord? existing;
 
   @override
   State<AddExpensePage> createState() => _AddExpensePageState();
@@ -18,23 +25,91 @@ class _AddExpensePageState extends State<AddExpensePage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
+  bool _scanning = false;
 
   @override
   void initState() {
     super.initState();
-    _amountController.addListener(() {
-      context.read<AddExpenseViewModel>().setAmount(_amountController.text);
-    });
+    final existing = widget.existing;
+    if (existing != null) {
+      _amountController.text = existing.amount.toStringAsFixed(2);
+      _descriptionController.text = existing.description ?? '';
+    }
+    _amountController.addListener(_onAmountChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AddExpenseViewModel>().clearData();
+      final vm = context.read<AddExpenseViewModel>();
+      final existing = widget.existing;
+      if (existing == null) {
+        vm.clearData();
+      } else {
+        vm.loadForEdit(existing);
+      }
     });
   }
 
   @override
   void dispose() {
+    _amountController.removeListener(_onAmountChanged);
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  void _onAmountChanged() {
+    context.read<AddExpenseViewModel>().setAmount(_amountController.text);
+  }
+
+  /// Photograph (or pick) a receipt, read it with on-device OCR and fill in
+  /// the amount, date and description. The photo is kept as proof.
+  Future<void> _scanReceipt(AddExpenseViewModel viewModel) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picked = await ImagePicker().pickImage(source: source, maxWidth: 2000);
+    if (picked == null || !mounted) return;
+
+    setState(() => _scanning = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final saved = await File(picked.path).copy('${appDir.path}/${p.basename(picked.path)}');
+      viewModel.setImagePath(saved.path);
+
+      final data = await ReceiptScanner.scan(saved.path);
+      if (!mounted) return;
+      if (data.total != null) _amountController.text = data.total!.toStringAsFixed(2);
+      if (data.date != null) viewModel.setDate(data.date!);
+      if (data.merchant != null && _descriptionController.text.isEmpty) {
+        _descriptionController.text = data.merchant!;
+      }
+      messenger.showSnackBar(SnackBar(
+        content: Text(data.isEmpty
+            ? "Couldn't read this receipt. The photo is attached; please fill in the details."
+            : 'Filled in from the receipt. Check the amount before saving.'),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Receipt scan failed: $e')));
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
   }
 
   Future<void> _pickImage(AddExpenseViewModel viewModel) async {
@@ -70,7 +145,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Expense saved successfully')),
+          SnackBar(content: Text(widget.existing == null ? 'Expense saved' : 'Expense updated')),
         );
         Navigator.pop(context);
       } else if (mounted) {
@@ -86,267 +161,117 @@ class _AddExpensePageState extends State<AddExpensePage> {
     final viewModel = context.watch<AddExpenseViewModel>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            height: 100,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFF44336), Color(0xFFD32F2F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+      appBar: AppBar(title: Text(viewModel.isEditing ? 'Edit expense' : 'Add expense')),
+      bottomNavigationBar: BottomActionBar(label: viewModel.isEditing ? 'Save changes' : 'Save expense', onPressed: () => _saveExpense(viewModel)),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space2, AppTheme.space4, AppTheme.space5),
+          children: [
+            FilledButton.tonalIcon(
+              onPressed: _scanning ? null : () => _scanReceipt(viewModel),
+              icon: _scanning
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.document_scanner_outlined),
+              label: Text(_scanning ? 'Reading receipt…' : 'Scan receipt'),
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(right: 48.0),
-                        child: Text(
-                          'Add Expenses',
-                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: AppTheme.space5),
+            const FormLabel('Amount'),
+            FormInput(
+              controller: _amountController,
+              hint: '0.00',
+              isNumber: true,
+              isMoney: true,
+              validator: FormInput.amount('Amount', allowZero: false),
+            ),
+            const FormLabel('Category'),
+            DropdownButtonFormField<String>(
+              value: viewModel.selectedCategory,
+              isExpanded: true,
+              items: viewModel.categories.map((String category) {
+                return DropdownMenuItem(value: category, child: Text(category, overflow: TextOverflow.ellipsis));
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  viewModel.setCategory(newValue);
+                }
+              },
+            ),
+            const SizedBox(height: AppTheme.space3),
+            _buildTaxDeductibleSection(viewModel),
+            const SizedBox(height: AppTheme.space4),
+            const FormLabel('Description'),
+            FormInput(controller: _descriptionController, hint: 'e.g. Clinic visit', validator: FormInput.maxLength(100)),
+            const FormLabel('Date'),
+            DateField(date: viewModel.selectedDate, onTap: () => _selectDate(context, viewModel)),
+            if (!viewModel.isEditing)
+              RepeatMonthlyTile(
+              value: viewModel.repeatMonthly,
+              dayOfMonth: viewModel.selectedDate.day,
+              onChanged: viewModel.setRepeatMonthly,
+            ),
+            const SizedBox(height: AppTheme.space4),
+            const FormLabel('Receipt'),
+            ProofPicker(
+              imagePath: viewModel.proofImagePath,
+              emptyLabel: 'Add a photo of the receipt',
+              onTap: () => _pickImage(viewModel),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaxDeductibleSection(AddExpenseViewModel viewModel) {
+    final app = context.appColors;
+    final isEligible = viewModel.isCategoryDeductible;
+    final isLimitExceeded = viewModel.isLimitExceeded;
+
+    final Color bg;
+    final Color fg;
+    final IconData icon;
+    final String message;
+    if (!isEligible) {
+      bg = context.colors.surfaceContainerHigh;
+      fg = context.colors.onSurfaceVariant;
+      icon = Icons.block_rounded;
+      message = 'Not eligible for Malaysian tax relief';
+    } else if (isLimitExceeded) {
+      bg = app.warningContainer;
+      fg = app.onWarningContainer;
+      icon = Icons.warning_amber_rounded;
+      message = 'Over the remaining ${formatRM(viewModel.getRemainingLimit(viewModel.selectedCategory), whole: true)} limit';
+    } else {
+      bg = app.taxContainer;
+      fg = app.onTaxContainer;
+      icon = Icons.verified_rounded;
+      message = 'This category qualifies for tax relief';
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(AppTheme.space4, AppTheme.space2, AppTheme.space2, AppTheme.space2),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppTheme.radiusSmall + 4)),
+      child: Row(
+        children: [
+          Icon(icon, color: fg),
+          const SizedBox(width: AppTheme.space3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tax deductible', style: context.text.titleSmall?.copyWith(color: fg)),
+                Text(message, style: context.text.bodySmall?.copyWith(color: fg)),
+              ],
             ),
           ),
-
-          // Form
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLabel('Amount'),
-                    _buildTextField(
-                      controller: _amountController,
-                      hint: '0.0',
-                      isNumber: true,
-                      validator: (val) => _validateAmount(val, 'Amount', allowZero: false),
-                    ),
-
-                    _buildLabel('Category'),
-                    DropdownButtonFormField<String>(
-                      value: viewModel.selectedCategory,
-                      decoration: _inputDecoration(''),
-                      items: viewModel.categories.map((String category) {
-                        return DropdownMenuItem(value: category, child: Text(category));
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          viewModel.setCategory(newValue);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    if (viewModel.isLimitExceeded)
-                      _buildLimitWarning('Note: You have already reached the RM ${viewModel.getLimitForCategory(viewModel.selectedCategory).toInt()} relief limit for ${viewModel.selectedCategory}; this entry won\'t further reduce your tax.'),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: viewModel.isCategoryDeductible ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: viewModel.isCategoryDeductible ? Colors.green.shade300 : Colors.red.shade300,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: viewModel.isTaxDeductible,
-                            fillColor: WidgetStateProperty.resolveWith((states) {
-                              if (!viewModel.isCategoryDeductible) return Colors.red.shade200;
-                              if (states.contains(WidgetState.selected)) return Colors.red;
-                              return Colors.white;
-                            }),
-                            onChanged: viewModel.isCategoryDeductible
-                                ? (value) => viewModel.setTaxDeductible(value ?? false)
-                                : null,
-                            activeColor: Colors.red,
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Tax Deductible',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: viewModel.isCategoryDeductible ? Colors.black : Colors.red.shade900,
-                                  ),
-                                ),
-                                Text(
-                                  viewModel.isCategoryDeductible
-                                      ? 'This category qualifies for tax relief'
-                                      : 'Not eligible for Malaysian tax relief',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: viewModel.isCategoryDeductible ? Colors.green.shade700 : Colors.red.shade700,
-                                      fontWeight: FontWeight.bold
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: Icon(
-                                viewModel.isCategoryDeductible ? Icons.check_circle : Icons.error_outline,
-                                color: viewModel.isCategoryDeductible ? Colors.green : Colors.red,
-                                size: 24
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildLabel('Descriptions'),
-                    _buildTextField(
-                      controller: _descriptionController,
-                      hint: 'Examples...',
-                      validator: (val) => (val != null && val.length > 100) ? 'Description too long (max 100 chars)' : null,
-                    ),
-
-                    _buildLabel('Date'),
-                    InkWell(
-                      onTap: () => _selectDate(context, viewModel),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(DateFormat('dd/MM/yyyy').format(viewModel.selectedDate)),
-                            const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildLabel('Proof'),
-                    GestureDetector(
-                      onTap: () => _pickImage(viewModel),
-                      child: Container(
-                        width: double.infinity,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
-                          color: Colors.grey.shade50,
-                        ),
-                        child: viewModel.proofImagePath == null
-                            ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.camera_alt_outlined, size: 40, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text('Capture receipt/proof', style: TextStyle(color: Colors.grey)),
-                          ],
-                        )
-                            : ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.file(File(viewModel.proofImagePath!), fit: BoxFit.cover),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: () => _saveExpense(viewModel),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        ),
-                        child: const Text('Save Expense', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
+          Switch(
+            value: viewModel.isTaxDeductible,
+            onChanged: (isEligible && !isLimitExceeded) ? (value) => viewModel.setTaxDeductible(value) : null,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-    );
-  }
-
-  Widget _buildLimitWarning(String message) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Text(
-        message,
-        style: const TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w500),
-      ),
-    );
-  }
-
-  String? _validateAmount(String? value, String fieldName, {bool allowZero = true}) {
-    if (value == null || value.isEmpty) return 'Required';
-    final n = double.tryParse(value);
-    if (n == null) return 'Invalid number';
-    if (n < 0) return '$fieldName cannot be negative';
-    if (!allowZero && n == 0) return '$fieldName must be greater than zero';
-    return null;
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    bool isNumber = false,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
-        decoration: _inputDecoration(hint),
-        validator: validator ?? (value) => (value == null || value.isEmpty) ? 'Required' : null,
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
     );
   }
 }
