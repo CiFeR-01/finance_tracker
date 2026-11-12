@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
@@ -17,7 +18,7 @@ class AuthService {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>);
       }
     } catch (e) {
-      print('Error getting user data: $e');
+      debugPrint('Error getting user data: $e');
     }
     return null;
   }
@@ -49,7 +50,7 @@ class AuthService {
       }
       return result;
     } catch (e) {
-      print('Registration error: $e');
+      debugPrint('Registration error: $e');
       rethrow;
     }
   }
@@ -59,7 +60,7 @@ class AuthService {
     try {
       return await _auth.signInWithEmailAndPassword(email: email, password: password);
     } catch (e) {
-      print('Login error: $e');
+      debugPrint('Login error: $e');
       rethrow;
     }
   }
@@ -74,7 +75,7 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email);
     } catch (e) {
-      print('Password reset error: $e');
+      debugPrint('Password reset error: $e');
       rethrow;
     }
   }

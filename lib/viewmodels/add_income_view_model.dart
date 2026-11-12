@@ -39,8 +39,8 @@ class AddIncomeViewModel extends ChangeNotifier {
     'Others'
   ];
 
-  static const double SOCSO_LIMIT = 350.0;
-  static const double EPF_LIMIT = 4000.0;
+  static const double socsoLimit = 350.0;
+  static const double epfLimit = 4000.0;
 
   String _selectedCategory = 'Salary';
   DateTime _selectedDate = DateTime.now();
@@ -104,8 +104,8 @@ class AddIncomeViewModel extends ChangeNotifier {
         .where((i) => i.incomeDate.year == year)
         .fold(0.0, (sum, item) => sum + item.epfAmount);
 
-    _isSocsoLimitReached = (totalSocsoInDB + _currentSocsoInput) >= SOCSO_LIMIT;
-    _isEpfLimitReached = (totalEpfInDB + _currentEpfInput) >= EPF_LIMIT;
+    _isSocsoLimitReached = (totalSocsoInDB + _currentSocsoInput) >= socsoLimit;
+    _isEpfLimitReached = (totalEpfInDB + _currentEpfInput) >= epfLimit;
     notifyListeners();
   }
 
