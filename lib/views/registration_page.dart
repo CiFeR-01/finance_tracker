@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import '../widgets/auth_layout.dart';
 import '../theme/app_theme.dart';
+import 'privacy_notice_page.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -185,6 +186,20 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             const SizedBox(height: AppTheme.space5),
             LoadingButton(label: 'Create account', loading: _isLoading, onPressed: _register),
+
+            const SizedBox(height: AppTheme.space2),
+
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyNoticePage(),
+                  ),
+                );
+              },
+              child: const Text('Read Privacy Notice'),
+            ),
           ],
         ),
       ),
