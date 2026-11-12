@@ -24,18 +24,23 @@ class _LoginPageState extends State<LoginPage> {
   String _getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'No account found with this email.';
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Incorrect email or password. Please try again.';
-      case 'invalid-email':
-        return 'The email address is not valid.';
+      case 'invalid-login-credentials':
       case 'user-disabled':
-        return 'This account has been disabled.';
+        return 'Incorrect email or password. Please try again.';
+
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+
       case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
+        return 'Too many login attempts. Please try again later.';
+
+      case 'network-request-failed':
+        return 'Connection failed. Please check your internet.';
+
       default:
-        return 'An unexpected error occurred. Please try again.';
+        return 'Login failed. Please try again later.';
     }
   }
 
@@ -59,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Connection error. Please check your internet.'),
+              content: const Text('Login failed. Please try again later.'),
             ),
           );
         }
