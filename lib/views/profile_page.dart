@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../widgets/page_header.dart';
 import '../theme/app_theme.dart';
 import '../widgets/reminders_card.dart';
@@ -71,11 +72,26 @@ class _ProfilePageState extends State<ProfilePage> {
           content: Text('Profile updated successfully'),
         ),
       );
-    } catch (e) {
+    } on FirebaseException catch (e) {
       if (!mounted) return;
+
+      final message = e.code == 'permission-denied'
+          ? 'Unable to update profile. Access was denied.'
+          : e.code == 'unavailable'
+          ? 'Service unavailable. Please try again later.'
+          : 'Unable to update profile. Please try again.';
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Update failed: $e'),
+        SnackBar(content: Text(message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to update profile. Please try again.',
+          ),
         ),
       );
     } finally {
@@ -283,18 +299,34 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Password reset link sent to your email!'),
+            content: Text('If this email is registered, a reset link will be sent.'),
           ),
         );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      final message = e.code == 'user-not-found'
+          ? 'If this email is registered, a reset link will be sent.'
+          : e.code == 'network-request-failed'
+          ? 'Connection failed. Please check your internet.'
+          : e.code == 'too-many-requests'
+          ? 'Too many attempts. Please try again later.'
+          : 'Unable to process your request. Please try again later.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to process your request. Please try again later.',
           ),
-        );
-      }
+        ),
+      );
     }
   }
 
