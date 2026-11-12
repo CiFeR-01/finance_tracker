@@ -36,6 +36,8 @@ migrate.log
 **/android/bin/
 *.keystore
 *.jks
+# Release signing secrets (keystore password) - never commit
+android/key.properties
 android/.gradle/
 android/local.properties
 android/project.properties
