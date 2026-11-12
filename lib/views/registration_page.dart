@@ -35,14 +35,22 @@ class _RegistrationPageState extends State<RegistrationPage> {
     switch (code) {
       case 'email-already-in-use':
         return 'This email is already registered.';
+
       case 'invalid-email':
-        return 'The email address is not valid.';
-      case 'operation-not-allowed':
-        return 'Email/password accounts are not enabled.';
+        return 'Please enter a valid email address.';
+
       case 'weak-password':
-        return 'Password is too weak. Must meet complexity requirements.';
+      case 'password-does-not-meet-requirements':
+        return 'Password is too weak. Please follow the password requirements.';
+
+      case 'network-request-failed':
+        return 'Connection failed. Please check your internet.';
+
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+
       default:
-        return 'Registration failed. Please try again.';
+        return 'Unable to create account. Please try again later.';
     }
   }
 
