@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -17,8 +17,10 @@ class AuthService {
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>);
       }
-    } catch (e) {
-      debugPrint('Error getting user data: $e');
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Get user data failed: unable to load profile.');
+      }
     }
     return null;
   }
@@ -49,8 +51,15 @@ class AuthService {
         await _db.collection('users').doc(user.uid).set(userModel.toMap());
       }
       return result;
-    } catch (e) {
-      debugPrint('Registration error: $e');
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('Registration failed: ${e.code}');
+      }
+      rethrow;
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Registration failed: unexpected error');
+      }
       rethrow;
     }
   }
@@ -59,8 +68,15 @@ class AuthService {
   Future<UserCredential?> login(String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(email: email, password: password);
-    } catch (e) {
-      debugPrint('Login error: $e');
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('Login failed: ${e.code}');
+      }
+      rethrow;
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Login failed: unexpected error');
+      }
       rethrow;
     }
   }
@@ -74,8 +90,15 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-    } catch (e) {
-      debugPrint('Password reset error: $e');
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('Password reset failed: ${e.code}');
+      }
+      rethrow;
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Password reset failed: unexpected error');
+      }
       rethrow;
     }
   }
