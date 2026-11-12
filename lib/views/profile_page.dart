@@ -7,6 +7,8 @@ import '../widgets/page_header.dart';
 import '../theme/app_theme.dart';
 import '../widgets/reminders_card.dart';
 import '../theme/theme_controller.dart';
+import 'privacy_notice_page.dart';
+import 'security_tips_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -267,10 +269,51 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: AppTheme.space5),
+
                 _buildSectionHeader('Reminders'),
                 const RemindersCard(),
                 const SizedBox(height: AppTheme.space5),
+                //privacy notice n security tips
+                _buildSectionHeader('Privacy & security'),
+                Card(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.privacy_tip_outlined),
+                        title: const Text('Privacy Notice'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PrivacyNoticePage(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const Divider(height: 1),
+
+                      ListTile(
+                        leading: const Icon(Icons.shield_outlined),
+                        title: const Text('Security Tips'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SecurityTipsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppTheme.space5),
                 _buildSectionHeader('Security'),
+
                 Card(
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: AppTheme.space4, vertical: AppTheme.space1),
