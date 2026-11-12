@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import 'temp_file_cleaner.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -66,6 +67,9 @@ class AuthService {
 
   // Logout
   Future<void> logout() async {
+    // Security: clear exported files and camera photos from the cache so
+    // the next person using this device cannot find them.
+    await TempFileCleaner.purgeSensitiveCache();
     await _auth.signOut();
   }
 
