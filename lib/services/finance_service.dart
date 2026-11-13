@@ -5,6 +5,7 @@ import '../models/expense_record.dart';
 import '../models/recurring_rule.dart';
 import '../models/tax_rates.dart';
 import 'reminder_planner.dart';
+import 'audit_log_service.dart';
 
 /// A service class that handles all financial data operations with Firestore.
 /// 
@@ -92,13 +93,15 @@ class FinanceService {
   Future<void> updateExpense(ExpenseRecord expense) => restoreExpense(expense);
 
   /// Deletes an income record identified by its unique [id].
-  Future<void> deleteIncome(String id) {
-    return _incomeCollection.doc(id).delete();
+  Future<void> deleteIncome(String id) async {
+    await _incomeCollection.doc(id).delete();
+    AuditLogService.instance.record(AuditEvent.recordDeleted, details: {'type': 'income'});
   }
 
   /// Deletes an expense record identified by its unique [id].
-  Future<void> deleteExpense(String id) {
-    return _expenseCollection.doc(id).delete();
+  Future<void> deleteExpense(String id) async {
+    await _expenseCollection.doc(id).delete();
+    AuditLogService.instance.record(AuditEvent.recordDeleted, details: {'type': 'expense'});
   }
 
   // ---------------------------------------------------------------------------

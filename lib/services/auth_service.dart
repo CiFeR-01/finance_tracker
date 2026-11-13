@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../widgets/app_lock.dart';
+import 'audit_log_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -46,6 +48,8 @@ class AuthService {
           taxProfile: taxProfile,
         );
         await _db.collection('users').doc(user.uid).set(userModel.toMap());
+        AppLockGate.markFreshSignIn();
+        AuditLogService.instance.record(AuditEvent.register);
       }
       return result;
     } catch (e) {
@@ -57,7 +61,13 @@ class AuthService {
   // Login
   Future<UserCredential?> login(String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(email: email, password: password);
+      AppLockGate.markFreshSignIn();
+      final result = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      AuditLogService.instance.record(AuditEvent.loginSuccess);
+      return result;
+    } on FirebaseAuthException catch (e) {
+      AuditLogService.instance.record(AuditEvent.loginFailed, details: {'reason': e.code});
+      rethrow;
     } catch (e) {
       print('Login error: $e');
       rethrow;
@@ -66,6 +76,7 @@ class AuthService {
 
   // Logout
   Future<void> logout() async {
+    await AuditLogService.instance.record(AuditEvent.logout);
     await _auth.signOut();
   }
 
@@ -73,6 +84,7 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
+      AuditLogService.instance.record(AuditEvent.passwordResetRequested);
     } catch (e) {
       print('Password reset error: $e');
       rethrow;
