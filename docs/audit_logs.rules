@@ -1,0 +1,22 @@
+// Add this block inside `match /databases/{database}/documents { ... }`
+// of the project's Firestore Security Rules (next to the existing rules).
+//
+// Clients may only append log entries. Nobody can read, edit or delete
+// them from the app, so logs are tamper-resistant and are reviewed in the
+// Firebase console by project members with an IAM role (Owner/Editor/Viewer).
+match /audit_logs/{logId} {
+  allow create: if request.resource.data.keys().hasOnly(['uid', 'event', 'details', 'platform', 'timestamp'])
+    && request.resource.data.timestamp == request.time
+    && request.resource.data.event is string
+    && request.resource.data.event.size() <= 40
+    && request.resource.data.details is map
+    && request.resource.data.details.size() <= 5
+    && (
+      // Signed-in users can only log events as themselves.
+      (request.auth != null && request.resource.data.uid == request.auth.uid)
+      // Failed sign-ins and reset requests have no user yet, so only these may be logged anonymously.
+      || (request.auth == null && request.resource.data.uid == null
+          && request.resource.data.event in ['login_failed', 'password_reset_requested'])
+    );
+  allow read, update, delete: if false;
+}

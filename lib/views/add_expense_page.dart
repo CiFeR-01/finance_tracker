@@ -187,7 +187,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
             ),
             const FormLabel('Category'),
             DropdownButtonFormField<String>(
-              value: viewModel.selectedCategory,
+              initialValue: viewModel.selectedCategory,
               isExpanded: true,
               items: viewModel.categories.map((String category) {
                 return DropdownMenuItem(value: category, child: Text(category, overflow: TextOverflow.ellipsis));

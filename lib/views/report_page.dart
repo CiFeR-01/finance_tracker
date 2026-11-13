@@ -5,6 +5,7 @@ import '../viewmodels/home_view_model.dart';
 import '../services/pdf_service.dart';
 import '../services/csv_export.dart';
 import '../services/receipt_archive.dart';
+import '../services/audit_log_service.dart';
 import '../widgets/page_header.dart';
 import '../theme/app_theme.dart';
 import '../theme/formatters.dart';
@@ -44,6 +45,7 @@ class _ReportPageState extends State<ReportPage> {
     };
     try {
       await CsvExport.share(incomes: incomes, expenses: expenses, fileLabel: label);
+      AuditLogService.instance.record(AuditEvent.exportCsv, details: {'range': label});
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
@@ -58,6 +60,7 @@ class _ReportPageState extends State<ReportPage> {
     }
     try {
       final missing = await ReceiptArchive.share(year: year, expenses: vm.expenses, incomes: vm.incomes);
+      AuditLogService.instance.record(AuditEvent.exportReceipts, details: {'year': '$year'});
       if (missing > 0) {
         messenger.showSnackBar(SnackBar(
           content: Text('$missing record${missing == 1 ? ' has' : 's have'} no receipt photo. They are marked MISSING in index.csv.'),
@@ -203,7 +206,7 @@ class _ReportPageState extends State<ReportPage> {
                   title: 'Category report',
                   description: 'Expenses in one category with attached receipts.',
                   extra: DropdownButtonFormField<String>(
-                    value: _selectedCategory,
+                    initialValue: _selectedCategory,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Category'),
                     items: _categories.map((String category) {

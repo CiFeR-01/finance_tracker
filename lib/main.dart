@@ -8,6 +8,7 @@ import 'theme/theme_controller.dart';
 import 'views/home_page.dart';
 import 'views/login_page.dart';
 import 'views/network_diagnostic_screen.dart';
+import 'widgets/app_lock.dart';
 import 'services/finance_service.dart';
 import 'services/auth_service.dart';
 import 'viewmodels/home_view_model.dart';
@@ -123,7 +124,8 @@ class _FinanceTrackerAppState extends State<FinanceTrackerApp> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (snapshot.hasData) {
-      return const HomePage();
+      // Re-authenticate with biometrics or device PIN before showing financial data.
+      return const AppLockGate(child: HomePage());
     }
     return const LoginPage();
   }
