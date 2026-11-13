@@ -203,7 +203,7 @@ class _ReportPageState extends State<ReportPage> {
                   title: 'Category report',
                   description: 'Expenses in one category with attached receipts.',
                   extra: DropdownButtonFormField<String>(
-                    value: _selectedCategory,
+                    initialValue: _selectedCategory,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Category'),
                     items: _categories.map((String category) {
