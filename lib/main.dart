@@ -11,6 +11,7 @@ import 'views/network_diagnostic_screen.dart';
 import 'widgets/app_lock.dart';
 import 'services/finance_service.dart';
 import 'services/auth_service.dart';
+import 'services/temp_file_cleaner.dart';
 import 'viewmodels/home_view_model.dart';
 import 'viewmodels/tax_view_model.dart';
 import 'viewmodels/add_expense_view_model.dart';
@@ -38,6 +39,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Security: remove any exported files or camera photos left in the cache
+  // from a previous session (e.g. if the app was closed mid-share).
+  await TempFileCleaner.purgeSensitiveCache();
   // Instantiate the shared FinanceService.
   financeService = FinanceService();
   await themeController.load();

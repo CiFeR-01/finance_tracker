@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/expense_record.dart';
 import '../models/income_record.dart';
+import 'temp_file_cleaner.dart';
 
 /// Builds a spreadsheet-friendly CSV of transactions and opens the share sheet
 /// (save to Files/Drive, email, open in Excel or Google Sheets).
@@ -48,7 +49,8 @@ class CsvExport {
     return f;
   }
 
-  /// Writes the CSV to a temp file and opens the system share sheet.
+  /// Writes the CSV to a temp file, opens the system share sheet, and then
+  /// deletes the temp file so financial data is not left in the cache.
   static Future<void> share({
     required List<IncomeRecord> incomes,
     required List<ExpenseRecord> expenses,
@@ -56,11 +58,16 @@ class CsvExport {
   }) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/finance_tracker_$fileLabel.csv');
-    // BOM so Excel opens UTF-8 text correctly.
-    await file.writeAsString('﻿${build(incomes: incomes, expenses: expenses)}');
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'Finance Tracker export ($fileLabel)',
-    ));
+    try {
+      // BOM so Excel opens UTF-8 text correctly.
+      await file.writeAsString('\uFEFF${build(incomes: incomes, expenses: expenses)}');
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'Finance Tracker export ($fileLabel)',
+      ));
+    } finally {
+      // Security: always remove the exported file after sharing.
+      await TempFileCleaner.deleteFile(file);
+    }
   }
 }

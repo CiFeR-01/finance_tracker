@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/expense_record.dart';
 import '../models/income_record.dart';
 import 'csv_export.dart';
+import 'temp_file_cleaner.dart';
 
 /// One file going into the receipts zip.
 class ArchiveEntry {
@@ -140,11 +141,16 @@ class ReceiptArchive {
 
     final dir = await getTemporaryDirectory();
     final out = File('${dir.path}/Tax receipts YA $year.zip');
-    await out.writeAsBytes(ZipEncoder().encodeBytes(archive));
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile(out.path, mimeType: 'application/zip')],
-      subject: 'Tax relief receipts YA $year',
-    ));
+    try {
+      await out.writeAsBytes(ZipEncoder().encodeBytes(archive));
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(out.path, mimeType: 'application/zip')],
+        subject: 'Tax relief receipts YA $year',
+      ));
+    } finally {
+      // Security: always remove the receipts zip after sharing.
+      await TempFileCleaner.deleteFile(out);
+    }
     return missing;
   }
 }
