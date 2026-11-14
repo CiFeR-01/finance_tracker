@@ -6,12 +6,60 @@ import '../widgets/app_lock.dart';
 import 'audit_log_service.dart';
 import 'temp_file_cleaner.dart';
 
-class AuthService {
+class AuthService extends ChangeNotifier {
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
+  AuthService._internal() {
+    _auth.userChanges().listen((user) async {
+      if (user != null && !user.emailVerified) {
+        try {
+          await user.reload();
+          final updatedUser = _auth.currentUser;
+          if (updatedUser != null && updatedUser.emailVerified) {
+            notifyListeners();
+          }
+        } catch (_) {
+          if (kDebugMode) {
+            debugPrint('Reload user failed: unable to refresh verification status.');
+          }
+        }
+      }
+    });
+  }
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // Stream of auth changes
-  Stream<User?> get userStream => _auth.authStateChanges();
+  Stream<User?> get userStream => _auth.userChanges();
+
+  // Current user
+  User? get currentUser => _auth.currentUser;
+
+  // Send initial or resend email verification link to currently signed in user
+  Future<void> sendVerificationEmail() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await user.reload();
+      user = _auth.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+    }
+  }
+
+  // Reload user and refresh ID token to check one-time email verification status
+  Future<User?> checkVerification() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await user.reload();
+      await user.getIdToken(true);
+      user = _auth.currentUser;
+      notifyListeners();
+      return user;
+    }
+    return null;
+  }
 
   // Get current user data
   Future<UserModel?> getUserData(String uid) async {
@@ -51,9 +99,18 @@ class AuthService {
           name: name,
           taxProfile: taxProfile,
         );
+        // Write initial profile document before verification
         await _db.collection('users').doc(user.uid).set(userModel.toMap());
         AppLockGate.markFreshSignIn();
         AuditLogService.instance.record(AuditEvent.register);
+
+        try {
+          await user.sendEmailVerification();
+        } catch (_) {
+          if (kDebugMode) {
+            debugPrint('Verification email failed to send during registration.');
+          }
+        }
       }
       return result;
     } on FirebaseAuthException catch (e) {
@@ -69,13 +126,28 @@ class AuthService {
     }
   }
 
-  // Login
-  Future<UserCredential?> login(String email, String password) async {
+  // Standard Email/Password Login
+  Future<UserCredential> login(String email, String password) async {
     try {
       AppLockGate.markFreshSignIn();
-      final result = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      UserCredential credential = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      User? user = credential.user;
+
+      if (user != null) {
+        // Force reload user profile from server to get fresh emailVerified status
+        await user.reload();
+        await user.getIdToken(true);
+        user = _auth.currentUser;
+
+        if (user != null && !user.emailVerified) {
+          try {
+            await user.sendEmailVerification();
+          } catch (_) {}
+        }
+      }
       AuditLogService.instance.record(AuditEvent.loginSuccess);
-      return result;
+      notifyListeners();
+      return credential;
     } on FirebaseAuthException catch (e) {
       AuditLogService.instance.record(AuditEvent.loginFailed, details: {'reason': e.code});
       if (kDebugMode) {
@@ -97,6 +169,7 @@ class AuthService {
     // the next person using this device cannot find them.
     await TempFileCleaner.purgeSensitiveCache();
     await _auth.signOut();
+    notifyListeners();
   }
 
   // Send Password Reset Email

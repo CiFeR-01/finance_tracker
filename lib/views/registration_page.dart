@@ -76,7 +76,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           taxProfile,
         );
         
-        if (mounted) Navigator.pop(context);
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
       } on FirebaseAuthException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

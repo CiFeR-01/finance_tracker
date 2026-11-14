@@ -7,6 +7,7 @@ import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
 import 'views/home_page.dart';
 import 'views/login_page.dart';
+import 'views/email_verification_page.dart';
 import 'views/network_diagnostic_screen.dart';
 import 'widgets/app_lock.dart';
 import 'services/finance_service.dart';
@@ -62,6 +63,7 @@ class FinanceTrackerApp extends StatefulWidget {
 }
 
 class _FinanceTrackerAppState extends State<FinanceTrackerApp> {
+  final AuthService _authService = AuthService();
   bool _showDiagnostic = const bool.fromEnvironment(
     'SHOW_NETWORK_DIAGNOSTIC',
     defaultValue: false,
@@ -88,49 +90,86 @@ class _FinanceTrackerAppState extends State<FinanceTrackerApp> {
       );
     }
 
-    return StreamBuilder<User?>(
-      stream: AuthService().userStream,
-      builder: (context, snapshot) {
-        // Unique key based on user ID to force provider recreation on logout/login.
-        final uid = snapshot.data?.uid;
+    return ListenableBuilder(
+      listenable: _authService,
+      builder: (context, _) {
+        return StreamBuilder<User?>(
+          stream: _authService.userStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return MaterialApp(
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.light(),
+                darkTheme: AppTheme.dark(),
+                themeMode: themeController.mode,
+                home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+              );
+            }
 
-        return MultiProvider(
-          key: ValueKey(uid),
-          providers: [
-            ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
-            ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, AuthService())),
-            ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
-            ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
-            ChangeNotifierProvider.value(value: themeController),
-          ],
-          child: ListenableBuilder(
-            listenable: themeController,
-            builder: (context, _) => MaterialApp(
-              title: 'FinanceTracker',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.light(),
-              darkTheme: AppTheme.dark(),
-              themeMode: themeController.mode, // Set in Profile > Appearance.
-              home: _buildHome(snapshot),
-            ),
-          ),
+            final user = snapshot.data;
+
+            // 1. Signed-out users -> Login Page
+            if (user == null) {
+              return ChangeNotifierProvider.value(
+                value: themeController,
+                child: ListenableBuilder(
+                  listenable: themeController,
+                  builder: (context, _) => MaterialApp(
+                    title: 'FinanceTracker',
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.light(),
+                    darkTheme: AppTheme.dark(),
+                    themeMode: themeController.mode,
+                    home: const LoginPage(),
+                  ),
+                ),
+              );
+            }
+
+            // 2. Unverified users -> Email Verification Page (Deferred Financial Listeners)
+            if (!user.emailVerified) {
+              return ChangeNotifierProvider.value(
+                value: themeController,
+                child: ListenableBuilder(
+                  listenable: themeController,
+                  builder: (context, _) => MaterialApp(
+                    title: 'FinanceTracker',
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.light(),
+                    darkTheme: AppTheme.dark(),
+                    themeMode: themeController.mode,
+                    home: const EmailVerificationPage(),
+                  ),
+                ),
+              );
+            }
+
+            // 3. Verified users -> Financial ViewModels & Dashboard
+            return MultiProvider(
+              key: ValueKey('${user.uid}_verified'),
+              providers: [
+                ChangeNotifierProvider(create: (_) => HomeViewModel(financeService)),
+                ChangeNotifierProvider(create: (_) => TaxViewModel(financeService, _authService)),
+                ChangeNotifierProvider(create: (_) => AddExpenseViewModel(financeService)),
+                ChangeNotifierProvider(create: (_) => AddIncomeViewModel(financeService)),
+                ChangeNotifierProvider.value(value: themeController),
+              ],
+              child: ListenableBuilder(
+                listenable: themeController,
+                builder: (context, _) => MaterialApp(
+                  title: 'FinanceTracker',
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.light(),
+                  darkTheme: AppTheme.dark(),
+                  themeMode: themeController.mode,
+                  // Re-authenticate with biometrics or device PIN before showing financial data.
+                  home: const AppLockGate(child: HomePage()),
+                ),
+              ),
+            );
+          },
         );
       },
     );
-  }
-
-  /// Determines which screen to show based on the authentication [snapshot].
-  /// 
-  /// Displays a loading indicator while waiting, the [HomePage] if logged in, 
-  /// or the [LoginPage] if not authenticated.
-  Widget _buildHome(AsyncSnapshot<User?> snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (snapshot.hasData) {
-      // Re-authenticate with biometrics or device PIN before showing financial data.
-      return const AppLockGate(child: HomePage());
-    }
-    return const LoginPage();
   }
 }

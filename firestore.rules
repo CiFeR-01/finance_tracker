@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Validates email verification via Firebase Auth standard token claim
+    function isEmailVerified() {
+      return request.auth != null
+          && request.auth.token.email_verified == true;
+    }
+
+    // Helper: Validates non-negative numeric financial fields
+    function isNonNegativeNumber(val) {
+      return val is number && val >= 0;
+    }
+
+    // User profile collection
+    match /users/{userId} {
+      // Registration: allow creating initial profile before email verification
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.uid == userId
+                    && request.resource.data.email is string
+                    && request.resource.data.name is string;
+
+      allow read: if isEmailVerified() && request.auth.uid == userId;
+
+      // Update requires email verification, preserving ownership and immutable email
+      allow update: if isEmailVerified()
+                    && request.auth.uid == userId
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.email == resource.data.email;
+
+      allow delete: if false;
+    }
+
+    // Income records collection
+    match /income_records/{recordId} {
+      allow read: if isEmailVerified() && resource.data.userId == request.auth.uid;
+
+      allow create: if isEmailVerified()
+                    && request.resource.data.userId == request.auth.uid
+                    && isNonNegativeNumber(request.resource.data.totalIncome)
+                    && isNonNegativeNumber(request.resource.data.epfAmount)
+                    && isNonNegativeNumber(request.resource.data.socsoAmount)
+                    && isNonNegativeNumber(request.resource.data.pcbAmount)
+                    && isNonNegativeNumber(request.resource.data.netIncome)
+                    && request.resource.data.category is string
+                    && request.resource.data.category.size() > 0
+                    && request.resource.data.incomeDate is timestamp;
+
+      allow update: if isEmailVerified()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == resource.data.userId
+                    && isNonNegativeNumber(request.resource.data.totalIncome)
+                    && isNonNegativeNumber(request.resource.data.epfAmount)
+                    && isNonNegativeNumber(request.resource.data.socsoAmount)
+                    && isNonNegativeNumber(request.resource.data.pcbAmount)
+                    && isNonNegativeNumber(request.resource.data.netIncome)
+                    && request.resource.data.category is string
+                    && request.resource.data.category.size() > 0;
+
+      allow delete: if isEmailVerified() && resource.data.userId == request.auth.uid;
+    }
+
+    // Expense records collection
+    match /expense_records/{recordId} {
+      allow read: if isEmailVerified() && resource.data.userId == request.auth.uid;
+
+      allow create: if isEmailVerified()
+                    && request.resource.data.userId == request.auth.uid
+                    && isNonNegativeNumber(request.resource.data.amount)
+                    && request.resource.data.category is string
+                    && request.resource.data.category.size() > 0
+                    && request.resource.data.isTaxDeductible is bool
+                    && request.resource.data.expenseDate is timestamp;
+
+      allow update: if isEmailVerified()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == resource.data.userId
+                    && isNonNegativeNumber(request.resource.data.amount)
+                    && request.resource.data.category is string
+                    && request.resource.data.category.size() > 0
+                    && request.resource.data.isTaxDeductible is bool;
+
+      allow delete: if isEmailVerified() && resource.data.userId == request.auth.uid;
+    }
+
+    // Audit log entries (Hari, see docs/audit_logs.rules). Append only.
+    match /audit_logs/{logId} {
+      allow create: if request.resource.data.keys().hasOnly(['uid', 'event', 'details', 'platform', 'timestamp'])
+        && request.resource.data.timestamp == request.time
+        && request.resource.data.event is string
+        && request.resource.data.event.size() <= 40
+        && request.resource.data.details is map
+        && request.resource.data.details.size() <= 5
+        && (
+          (request.auth != null && request.resource.data.uid == request.auth.uid)
+          || (request.auth == null && request.resource.data.uid == null
+              && request.resource.data.event in ['login_failed', 'password_reset_requested'])
+        );
+      allow read, update, delete: if false;
+    }
+
+    // Optional tax rate override per year, read by the tax estimate card.
+    match /tax_config/{year} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
