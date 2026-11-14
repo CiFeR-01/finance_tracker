@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../widgets/app_lock.dart';
 import 'audit_log_service.dart';
+import 'temp_file_cleaner.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -18,8 +20,10 @@ class AuthService {
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>);
       }
-    } catch (e) {
-      print('Error getting user data: $e');
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Get user data failed: unable to load profile.');
+      }
     }
     return null;
   }
@@ -52,8 +56,15 @@ class AuthService {
         AuditLogService.instance.record(AuditEvent.register);
       }
       return result;
-    } catch (e) {
-      print('Registration error: $e');
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('Registration failed: ${e.code}');
+      }
+      rethrow;
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Registration failed: unexpected error');
+      }
       rethrow;
     }
   }
@@ -67,9 +78,14 @@ class AuthService {
       return result;
     } on FirebaseAuthException catch (e) {
       AuditLogService.instance.record(AuditEvent.loginFailed, details: {'reason': e.code});
+      if (kDebugMode) {
+        debugPrint('Login failed: ${e.code}');
+      }
       rethrow;
-    } catch (e) {
-      print('Login error: $e');
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Login failed: unexpected error');
+      }
       rethrow;
     }
   }
@@ -77,6 +93,9 @@ class AuthService {
   // Logout
   Future<void> logout() async {
     await AuditLogService.instance.record(AuditEvent.logout);
+    // Security: clear exported files and camera photos from the cache so
+    // the next person using this device cannot find them.
+    await TempFileCleaner.purgeSensitiveCache();
     await _auth.signOut();
   }
 
@@ -85,8 +104,15 @@ class AuthService {
     try {
       await _auth.sendPasswordResetEmail(email: email);
       AuditLogService.instance.record(AuditEvent.passwordResetRequested);
-    } catch (e) {
-      print('Password reset error: $e');
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('Password reset failed: ${e.code}');
+      }
+      rethrow;
+    } catch (_) {
+      if (kDebugMode) {
+        debugPrint('Password reset failed: unexpected error');
+      }
       rethrow;
     }
   }

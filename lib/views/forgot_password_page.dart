@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_layout.dart';
 import '../theme/app_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -24,20 +25,48 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Password reset link sent! Check your email.'),
+              content: Text('If this email is registered, a reset link will be sent.'),
             ),
           );
           Navigator.pop(context);
         }
-      } catch (e) {
-        if (mounted) {
+      } on FirebaseAuthException catch (e) {
+        if (!mounted) return;
+
+        if (e.code == 'user-not-found') {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString()}'),
+            const SnackBar(
+              content: Text(
+                'If this email is registered, a reset link will be sent.',
+              ),
             ),
           );
+          Navigator.pop(context);
+        } else {
+          final message = e.code == 'invalid-email'
+              ? 'Please enter a valid email address.'
+              : e.code == 'network-request-failed'
+              ? 'Connection failed. Please check your internet.'
+              : e.code == 'too-many-requests'
+              ? 'Too many attempts. Please try again later.'
+              : 'Unable to process your request. Please try again later.';
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
         }
-      } finally {
+      } catch (_) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Unable to process your request. Please try again later.',
+            ),
+          ),
+        );
+      }
+      finally {
         if (mounted) setState(() => _isLoading = false);
       }
     }

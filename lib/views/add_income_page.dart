@@ -156,7 +156,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
             ),
             if (viewModel.isEpfLimitReached)
               _buildLimitWarning(
-                  'You have reached the ${formatRM(AddIncomeViewModel.EPF_LIMIT, whole: true)} EPF relief limit, so this entry won\'t lower your tax further.'),
+                  'You have reached the ${formatRM(AddIncomeViewModel.epfLimit, whole: true)} EPF relief limit, so this entry won\'t lower your tax further.'),
             const FormLabel('SOCSO'),
             FormInput(
               controller: _socsoController,
@@ -167,7 +167,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
             ),
             if (viewModel.isSocsoLimitReached)
               _buildLimitWarning(
-                  'You have reached the ${formatRM(AddIncomeViewModel.SOCSO_LIMIT, whole: true)} SOCSO relief limit, so this entry won\'t lower your tax further.'),
+                  'You have reached the ${formatRM(AddIncomeViewModel.socsoLimit, whole: true)} SOCSO relief limit, so this entry won\'t lower your tax further.'),
             const FormLabel('PCB'),
             FormInput(
               controller: _pcbController,

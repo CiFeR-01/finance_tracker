@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import '../widgets/auth_layout.dart';
 import '../theme/app_theme.dart';
+import 'privacy_notice_page.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -35,14 +36,22 @@ class _RegistrationPageState extends State<RegistrationPage> {
     switch (code) {
       case 'email-already-in-use':
         return 'This email is already registered.';
+
       case 'invalid-email':
-        return 'The email address is not valid.';
-      case 'operation-not-allowed':
-        return 'Email/password accounts are not enabled.';
+        return 'Please enter a valid email address.';
+
       case 'weak-password':
-        return 'Password is too weak. Must meet complexity requirements.';
+      case 'password-does-not-meet-requirements':
+        return 'Password is too weak. Please follow the password requirements.';
+
+      case 'network-request-failed':
+        return 'Connection failed. Please check your internet.';
+
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+
       default:
-        return 'Registration failed. Please try again.';
+        return 'Unable to create account. Please try again later.';
     }
   }
 
@@ -177,6 +186,20 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             const SizedBox(height: AppTheme.space5),
             LoadingButton(label: 'Create account', loading: _isLoading, onPressed: _register),
+
+            const SizedBox(height: AppTheme.space2),
+
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyNoticePage(),
+                  ),
+                );
+              },
+              child: const Text('Read Privacy Notice'),
+            ),
           ],
         ),
       ),
